@@ -23,6 +23,8 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"flowbite-svelte": "^0.46.18"
+		"chart.js": "^4.4.4",
+		"flowbite-svelte": "^0.46.18",
+		"svelte-chartjs": "^3.1.5"
 	}
 }

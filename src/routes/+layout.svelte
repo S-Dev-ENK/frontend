@@ -1,14 +1,16 @@
 <script>
 	import '../app.css';
 	import { page } from '$app/stores';
-  </script>
-  
-  <main class="bg-black min-h-screen flex flex-col items-center justify-start text-white p-5 relative">
+</script>
+
+<div class="min-h-screen flex flex-col bg-black text-white">
 	{#if $page.url.pathname !== '/'}
-	  <a href="/" class="absolute font-bold top-5 left-5 text-white p-2 bg-gray-700 text-white rounded-md hover:bg-gray-600">
-		Home
-	</a>
+		<nav class="bg-gray-900 p-4">
+			<a href="/" class="font-bold text-white p-2 bg-gray-700 rounded-md hover:bg-gray-600">
+				Home
+			</a>
+		</nav>
 	{/if}
 	
 	<slot />
-  </main>
+</div>
