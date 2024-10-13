@@ -1,114 +1,250 @@
 <script>
-  import { fade } from 'svelte/transition';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { Pie, Bar } from 'svelte-chartjs';
-  import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
+    import { page } from '$app/stores';
+    import { onMount } from 'svelte';
+    import { Pie, Bar } from 'svelte-chartjs';
+    import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
+    import { goto } from '$app/navigation';
+    import { searchHistory } from '$lib/stores/searchHistory';
+ 
 
-  ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
+    ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
-  // URL에서 분석한 URL 가져오기
-  $: analyzedUrl = $page.url.searchParams.get('url') || '';
+    let url = '';
+    let results = null;
+    let isAnalyzing = false;
 
-  // 더미 데이터 (실제로는 API 호출 결과로 대체)
-  let results = [
-      {
-          title: "막대그래프",
-          data: {
-              labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-              datasets: [{
-                  label: '# of Votes',
-                  data: [12, 19, 3, 5, 2, 3],
-                  backgroundColor: [
-                      'rgba(255, 99, 132, 0.2)',
-                      'rgba(54, 162, 235, 0.2)',
-                      'rgba(255, 206, 86, 0.2)',
-                      'rgba(75, 192, 192, 0.2)',
-                      'rgba(153, 102, 255, 0.2)',
-                      'rgba(255, 159, 64, 0.2)'
-                  ],
-                  borderColor: [
-                      'rgba(255, 99, 132, 1)',
-                      'rgba(54, 162, 235, 1)',
-                      'rgba(255, 206, 86, 1)',
-                      'rgba(75, 192, 192, 1)',
-                      'rgba(153, 102, 255, 1)',
-                      'rgba(255, 159, 64, 1)'
-                  ],
-                  borderWidth: 1
-              }]
-          },
-          route: "/details/bar-chart"
-      },
-      {
-          title: "원형그래프",
-          data: {
-              labels: ['Red', 'Blue', 'Yellow'],
-              datasets: [{
-                  data: [300, 50, 100],
-                  backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
-                  hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
-              }]
-          },
-          route: "/details/pie-chart"
-      },
-      {
-          title: "유사 URL",
-          data: ["http://example1.com", "http://example2.com", "http://example3.com"],
-          route: "/details/similar-urls"
-      },
-      {
-          title: "위험정도",
-          data: "위험도: 높음",
-          route: "/details/risk-level"
-      }
-  ];
+    onMount(() => {
+        url = $page.url.searchParams.get('url') || '';
+        if (url) {
+            fetchResults(url);
+        }
+    });
 
-  const goToDetail = (route, event) => {
-      if (event) {
-          event.preventDefault();
-      }
-      goto(route);
-  };
+    async function fetchResults(urlToAnalyze) {
+        isAnalyzing = true;
+        // API 호출 시뮬레이션 (실제 구현 시 여기에 API 호출 로직 구현)
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 로딩 애니메이션을 보기 위해 1초로 늘림
+        const score = Math.floor(Math.random() * 100); // 여기 실제 종합 점수 넣어야함에 최종 계산값 여기 넣기
 
-  const goToHome = () => {
-      goto('/');
-  };
+        results = {
+            score,
+            communityScore: 0,
+            status: 200,
+            contentType: 'text/html; charset=UTF-8',
+            lastAnalysisDate: '1 day ago', // 개요부분에 들어가는 정보들
+            barChartData: {
+                labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+                datasets: [{
+                    label: '# of Votes',
+                    data: [12, 19, 3, 5, 2, 3],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            pieChartData: {
+                labels: ['Red', 'Blue', 'Yellow'],
+                datasets: [{
+                    data: [300, 50, 100],
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+                    hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+                }]
+            },
+            securityVendors: [
+                { name: 'Abusix', status: 'Clean' },
+                { name: 'Acronis', status: 'unknown' },
+                { name: 'ADMINUSLabs', status: 'Clean' },
+                { name: 'AegisLab', status: 'Malicious' },
+                { name: 'AlienVault', status: 'Clean' },
+                { name: 'AlienVault', status: 'Clean' },
+                { name: 'AegisLab', status: 'Malicious' },
+                { name: 'AegisLab', status: 'Malicious' },
+                { name: 'AegisLab', status: 'Malicious' },
+                { name: 'AegisLab', status: 'Malicious' },
+                { name: 'AlienVault', status: 'Clean' },
+                { name: 'AlienVault', status: 'Clean' },
+                { name: 'AlienVault', status: 'Clean' },
+                { name: 'AlienVault', status: 'Clean' },
+                { name: 'AlienVault', status: 'Clean' },
+            ]
+        };
+  
+        searchHistory.saveSearchHistory(urlToAnalyze, score);
+        isAnalyzing = false;
+    }
+
+    function handleSubmit() {
+        if (url) {
+            goto(`/results?url=${encodeURIComponent(url)}`);
+            fetchResults(url);
+        }
+    }
+
 </script>
 
-<main class="min-h-screen flex flex-col items-center justify-center p-5" in:fade>
-  <h1 class="text-4xl font-bold mb-10 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">분석 결과</h1>
+<div class="min-h-screen bg-gray-900 text-white p-4">
+    <header class="mb-6">
+        <div class="flex justify-between items-center mb-4">
+        
+        </div>
+        <form on:submit|preventDefault={handleSubmit} class="flex gap-2">
+            <input
+                bind:value={url}
+                type="text"
+                placeholder="분석할 URL을 입력하세요"
+                class="flex-grow p-3 rounded-md bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+                type="submit"
+                class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                disabled={isAnalyzing}
+            >
+                {isAnalyzing ? '분석 중...' : '탐지 시작'}
+            </button>
+        </form>
+    </header>
 
-  <h2 class="text-2xl font-bold mb-5">분석된 URL: {analyzedUrl}</h2>
-  
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
-      {#each results as { title, data, route }}
-          <div 
-              class="w-auto h-64 p-5 bg-gray-800 rounded-lg flex flex-col items-center justify-center hover:scale-105 transition-transform cursor-pointer"
-              on:click={(event) => goToDetail(route, event)}
-          >
-              <h3 class="text-xl font-bold mb-3 text-white">{title}</h3>
-              {#if title === "막대그래프"}
-                  <Bar data={data} options={{ responsive: true, maintainAspectRatio: false }} />
-              {:else if title === "원형그래프"}
-                  <Pie data={data} options={{ responsive: true, maintainAspectRatio: false }} />
-              {:else if Array.isArray(data)}
-                  <ul class="text-green-300">
-                      {#each data as item}
-                          <li>{item}</li>
-                      {/each}
-                  </ul>
-              {:else}
-                  <div class="text-green-300">{data}</div>
-              {/if}
-          </div>
-      {/each}
-  </div>
-  <h1 class="text-2xl font-bold mb-5">상세 내역을 보려면 각 항목을 눌러보세요.</h1>
-  <button
-      class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-      on:click={goToHome}
-  >
-      새 URL 분석
-  </button>
-</main>
+    <main class="grid grid-cols-3 gap-6">
+        {#if isAnalyzing}
+            <div class="col-span-3 flex flex-col items-center justify-center">
+                <svg class="animate-spin h-16 w-16 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-4 text-xl animate-pulse">URL을 분석하는 중입니다...</p>
+            </div>
+        {:else if results}
+        <div class="col-span-2 space-y-6">
+            <div id="summary" class="bg-gray-800 p-6 rounded-lg h-auto">
+                <h2 class="text-2xl font-bold mb-4">요약</h2>
+                <div class="overflow-x-auto overflow-y-auto h-dvh max-h-[30vh]">
+                    <table class="w-full">
+                        <tr class="border-b border-gray-700">
+                            <td class="py-2 text-lg">Total Score</td>
+                            <td class="py-2">
+                                <span class="text-lg font-bold px-3 py-1 rounded-full 
+                                    {results.score < 50 ? 'bg-green-500' : 
+                                    results.score < 80 ? 'bg-yellow-500' : 'bg-red-500'}">
+                                    {results.score}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="py-2 text-lg">Community Score</td>
+                            <td class="py-2 text-lg">{results.communityScore}</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="py-2 text-lg">Status</td>
+                            <td class="py-2 text-lg">{results.status}</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="py-2 text-lg">Content Type</td>
+                            <td class="py-2 text-lg">{results.contentType}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-lg">Last Analysis Date</td>
+                            <td class="py-2 text-lg">{results.lastAnalysisDate}</td>
+                        </tr>
+                    </table>
+                </div>    
+            </div>
+
+            <div id="vendorData" class="bg-gray-800 p-6 rounded-lg h-auto">
+                <h2 class="text-2xl font-bold mb-4">보안 벤더 분석</h2>
+                <div class="overflow-x-auto overflow-y-auto h-dvh max-h-[30vh]">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th class="pb-3 text-lg">벤더</th>
+                                <th class="pb-3 text-lg">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each results.securityVendors as vendor}
+                                <tr class="border-t border-gray-700 h-auto">
+                                    <td class="py-3 text-lg">{vendor.name}</td>
+                                    <td class="py-3">
+                                        <span 
+                                            class="px-3 py-1 rounded-full text-sm font-medium" 
+                                            class:bg-green-500={vendor.status === 'Clean'}
+                                            class:bg-red-500={vendor.status === 'Malicious'}
+                                            class:bg-orange-500={vendor.status !== 'Clean' && vendor.status !== 'Malicious'}
+                                        >
+                                            {vendor.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div id="pieChart" class="bg-gray-800 p-6 rounded-lg h-auto">
+                <h2 class="text-2xl font-bold mb-4">파이 차트</h2>
+                <div class="h-dvh max-h-[30vh]">
+                    <Pie data={results.pieChartData} options={{ responsive: true, maintainAspectRatio: false }} />
+                </div>
+            </div>
+
+            <div id="barChart" class="bg-gray-800 p-6 rounded-lg h-auto">
+                <h2 class="text-2xl font-bold mb-4">바 차트</h2>
+                <div class="h-dvh max-h-[30vh]">
+                    <Bar data={results.barChartData} options={{ responsive: true, maintainAspectRatio: false }} />
+                </div>
+            </div>
+        </div>
+
+        {:else}
+            <p class="col-span-3 text-center text-xl">URL을 입력하고 '탐지 시작' 버튼을 클릭하세요.</p>
+        {/if}
+    </main>
+</div>
+
+<style>
+    :global(body) {
+        @apply bg-gray-900 text-white;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: .5;
+        }
+    }
+
+    .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+</style>
