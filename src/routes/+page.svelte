@@ -2,29 +2,28 @@
     import { fade } from 'svelte/transition';
     import { goto } from '$app/navigation';
     import { searchHistory } from '$lib/stores/searchHistory';
+    import api from '$lib/api';
    
     let url = '';
     let isAnalyzing = false;
+    let error = null;
 
     async function handleSubmit() {
         if (url && !isAnalyzing) {
             isAnalyzing = true;
+            error = null;
             
             try {
-                // 실제로는 여기서 API 호출을 수행합니다
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                // 임시 점수 생성 (실제로는 API 응답에서 받아와야 함) 여기 실제 종합 점수 넣어야함
-                const score = Math.floor(Math.random() * 100);
+                const result = await api.analyzeUrl(url);
                 
-                // 검색 기록 저장
-                searchHistory.saveSearchHistory(url, score);
+                // 검색 기록 저장 2depth에서 저장
+                //searchHistory.saveSearchHistory(url, result.score);
                 
                 // 결과 페이지로 이동
                 goto(`/results?url=${encodeURIComponent(url)}`);
-            } catch (error) {
-                console.error('Error during URL analysis:', error);
-                // 여기에 에러 처리 로직을 추가할 수 있습니다.
+            } catch (err) {
+                console.error('URL 분석 중 오류 발생:', err);
+                error = 'URL 분석 중 오류가 발생했습니다. 다시 시도해주세요.';
             } finally {
                 isAnalyzing = false;
             }
@@ -33,7 +32,7 @@
 </script>
 
 <div class="flex-grow flex flex-col items-center justify-center p-5">
-    <h1 class="text-6xl font-bold mb-10 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500">악성 URL 탐지기</h1>
+    <h1 class="text-4xl font-semibold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">Malicious URL Detector</h1>
 
     <form on:submit|preventDefault={handleSubmit} class="w-full max-w-md mx-auto mb-10" in:fade>
         <input
@@ -53,6 +52,10 @@
     
     {#if isAnalyzing}
         <div class="loader mx-auto"></div>
+    {/if}
+
+    {#if error}
+        <p class="text-red-500 mt-4">{error}</p>
     {/if}
 </div>
 

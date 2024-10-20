@@ -5,13 +5,14 @@
     import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
     import { goto } from '$app/navigation';
     import { searchHistory } from '$lib/stores/searchHistory';
- 
+    import api from '$lib/api';
 
     ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
     let url = '';
     let results = null;
     let isAnalyzing = false;
+    let error = null;
 
     onMount(() => {
         url = $page.url.searchParams.get('url') || '';
@@ -22,69 +23,75 @@
 
     async function fetchResults(urlToAnalyze) {
         isAnalyzing = true;
-        // API 호출 시뮬레이션 (실제 구현 시 여기에 API 호출 로직 구현)
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 로딩 애니메이션을 보기 위해 1초로 늘림
-        const score = Math.floor(Math.random() * 100); // 여기 실제 종합 점수 넣어야함에 최종 계산값 여기 넣기
+        error = null;
+        try {
+            // 먼저 URL 분석을 수행
+            const analysisResult = await api.analyzeUrl(urlToAnalyze);
+            if (!analysisResult.isSuccess) {
+                throw new Error('URL 분석에 실패했습니다.');
+            }
 
-        results = {
-            score,
-            communityScore: 0,
-            status: 200,
-            contentType: 'text/html; charset=UTF-8',
-            lastAnalysisDate: '1 day ago', // 개요부분에 들어가는 정보들
-            barChartData: {
-                labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-                datasets: [{
-                    label: '# of Votes',
-                    data: [12, 19, 3, 5, 2, 3],
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.2)',
-                        'rgba(54, 162, 235, 0.2)',
-                        'rgba(255, 206, 86, 0.2)',
-                        'rgba(75, 192, 192, 0.2)',
-                        'rgba(153, 102, 255, 0.2)',
-                        'rgba(255, 159, 64, 0.2)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            pieChartData: {
-                labels: ['Red', 'Blue', 'Yellow'],
-                datasets: [{
-                    data: [300, 50, 100],
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
-                    hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
-                }]
-            },
-            securityVendors: [
-                { name: 'Abusix', status: 'Clean' },
-                { name: 'Acronis', status: 'unknown' },
-                { name: 'ADMINUSLabs', status: 'Clean' },
-                { name: 'AegisLab', status: 'Malicious' },
-                { name: 'AlienVault', status: 'Clean' },
-                { name: 'AlienVault', status: 'Clean' },
-                { name: 'AegisLab', status: 'Malicious' },
-                { name: 'AegisLab', status: 'Malicious' },
-                { name: 'AegisLab', status: 'Malicious' },
-                { name: 'AegisLab', status: 'Malicious' },
-                { name: 'AlienVault', status: 'Clean' },
-                { name: 'AlienVault', status: 'Clean' },
-                { name: 'AlienVault', status: 'Clean' },
-                { name: 'AlienVault', status: 'Clean' },
-                { name: 'AlienVault', status: 'Clean' },
-            ]
-        };
+            // 분석 결과로 받은 url_uuid를 사용하여 상세 정보 요청
+            const detailsResult = await api.getDomainDetails(analysisResult.urlUuid);
+
+            // API 응답을 사용하여 results 객체 구성
+            results = {
+                // score: analysisResult.score || Math.floor(Math.random() * 100), // API에서 점수를 받지 못할 경우 임의의 점수 생성
+                isSuccess: detailsResult.isSuccess,
+                statusCode: detailsResult.statusCode,
+                isMalicious: detailsResult.isMalicious,
+                info1: detailsResult.details?.info1 || 'N/A',
+                info2: detailsResult.details?.info2 || 'N/A',
+                info3: detailsResult.details?.info3 || 'N/A',
+                barChartData: analysisResult.barChartData || {
+                    labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+                    datasets: [{
+                        label: '# of Votes',
+                        data: [12, 19, 3, 5, 2, 3],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                pieChartData: analysisResult.pieChartData || {
+                    labels: ['Red', 'Blue', 'Yellow'],
+                    datasets: [{
+                        data: [300, 50, 100],
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+                        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+                    }]
+                },
+                securityVendors: analysisResult.securityVendors || [
+                    { name: 'Abusix', status: 'Clean' },
+                    { name: 'Acronis', status: 'unknown' },
+                    { name: 'ADMINUSLabs', status: 'Clean' },
+                    { name: 'AegisLab', status: 'Malicious' },
+                    { name: 'AlienVault', status: 'Clean' },
+                    // ... 더 많은 더미 데이터
+                ]
+            };
   
-        searchHistory.saveSearchHistory(urlToAnalyze, score);
-        isAnalyzing = false;
+            searchHistory.saveSearchHistory(urlToAnalyze, results.statusCode);
+        } catch (err) {
+            console.error('결과 가져오기 오류:', err);
+            error = err.message;
+        } finally {
+            isAnalyzing = false;
+        }
     }
 
     function handleSubmit() {
@@ -93,7 +100,6 @@
             fetchResults(url);
         }
     }
-
 </script>
 
 <div class="min-h-screen bg-gray-900 text-white p-4">
@@ -127,6 +133,8 @@
                 </svg>
                 <p class="mt-4 text-xl animate-pulse">URL을 분석하는 중입니다...</p>
             </div>
+        {:else if error}
+            <p class="col-span-3 text-center text-xl text-red-500">{error}</p>
         {:else if results}
         <div class="col-span-2 space-y-6">
             <div id="summary" class="bg-gray-800 p-6 rounded-lg h-auto">
@@ -134,30 +142,33 @@
                 <div class="overflow-x-auto overflow-y-auto h-dvh max-h-[30vh]">
                     <table class="w-full">
                         <tr class="border-b border-gray-700">
-                            <td class="py-2 text-lg">Total Score</td>
+                            <td class="py-2 text-lg">Is Success</td>
+                            <td class="py-2 text-lg">{results.isSuccess ? 'Yes' : 'No'}</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="py-2 text-lg">Status Code</td>
                             <td class="py-2">
                                 <span class="text-lg font-bold px-3 py-1 rounded-full 
-                                    {results.score < 50 ? 'bg-green-500' : 
-                                    results.score < 80 ? 'bg-yellow-500' : 'bg-red-500'}">
-                                    {results.score}
+                                    {results.statusCode === 200 ? 'bg-green-500' : 'bg-red-500'}">
+                                    {results.statusCode}
                                 </span>
                             </td>
                         </tr>
                         <tr class="border-b border-gray-700">
-                            <td class="py-2 text-lg">Community Score</td>
-                            <td class="py-2 text-lg">{results.communityScore}</td>
+                            <td class="py-2 text-lg">Is Malicious</td>
+                            <td class="py-2 text-lg">{results.isMalicious ? 'Yes' : 'No'}</td>
                         </tr>
                         <tr class="border-b border-gray-700">
-                            <td class="py-2 text-lg">Status</td>
-                            <td class="py-2 text-lg">{results.status}</td>
+                            <td class="py-2 text-lg">Info 1</td>
+                            <td class="py-2 text-lg">{results.info1}</td>
                         </tr>
                         <tr class="border-b border-gray-700">
-                            <td class="py-2 text-lg">Content Type</td>
-                            <td class="py-2 text-lg">{results.contentType}</td>
+                            <td class="py-2 text-lg">Info 2</td>
+                            <td class="py-2 text-lg">{results.info2}</td>
                         </tr>
                         <tr>
-                            <td class="py-2 text-lg">Last Analysis Date</td>
-                            <td class="py-2 text-lg">{results.lastAnalysisDate}</td>
+                            <td class="py-2 text-lg">Info 3</td>
+                            <td class="py-2 text-lg">{results.info3}</td>
                         </tr>
                     </table>
                 </div>    

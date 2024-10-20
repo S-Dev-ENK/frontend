@@ -37,8 +37,8 @@
 
 <div class="min-h-screen flex flex-col bg-black text-white">
     <nav class="fixed top-0 left-0 right-0 bg-gray-900 p-4 shadow-md z-50 flex justify-between items-center">
-        <a href="/" class="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500"> 
-            악성 URL 탐지기
+        <a href="/" class="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"> 
+            Malicious URL Detector
             <!-- 2depth home 가기 기능 -->
         </a>
         <div class="flex items-center space-x-4">
