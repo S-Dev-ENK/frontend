@@ -25,9 +25,11 @@
 	"type": "module",
 	"dependencies": {
 		"chart.js": "^4.4.4",
+		"d3": "^7.9.0",
 		"flowbite-svelte": "^0.46.18",
 		"html2canvas": "^1.4.1",
 		"jspdf": "^2.5.2",
-		"svelte-chartjs": "^3.1.5"
+		"svelte-chartjs": "^3.1.5",
+		"topojson-client": "^3.1.0"
 	}
 }

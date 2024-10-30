@@ -14,29 +14,51 @@
     let isAnalyzing = false;
     let error = null;
 
-    onMount(() => {
-        url = $page.url.searchParams.get('url') || '';
-        if (url) {
-            fetchResults(url);
+    // URL 해싱을 위한 함수
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex;
+    }
+
+    onMount(async () => {
+        const urlHash = $page.url.searchParams.get('hash');
+        if (!urlHash) {
+            error = '올바르지 않은 접근입니다.';
+            return;
+        }
+
+        // localStorage에서 URL 복원
+        try {
+            const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
+            url = urlMap[urlHash];
+
+            if (!url) {
+                error = 'URL 정보를 찾을 수 없습니다.';
+                return;
+            }
+
+            await fetchResults(url);
+        } catch (err) {
+            console.error('URL 복원 오류:', err);
+            error = 'URL 정보 복원에 실패했습니다.';
         }
     });
 
-    async function fetchResults(urlToAnalyze) {
+    async function fetchResults(urlToAnalyze, currentHash) {  // currentHash 매개변수 추가
         isAnalyzing = true;
         error = null;
         try {
-            // 먼저 URL 분석을 수행
             const analysisResult = await api.analyzeUrl(urlToAnalyze);
             if (!analysisResult.isSuccess) {
                 throw new Error('URL 분석에 실패했습니다.');
             }
 
-            // 분석 결과로 받은 url_uuid를 사용하여 상세 정보 요청
             const detailsResult = await api.getDomainDetails(analysisResult.urlUuid);
-
-            // API 응답을 사용하여 results 객체 구성
+            
             results = {
-                // score: analysisResult.score || Math.floor(Math.random() * 100), // API에서 점수를 받지 못할 경우 임의의 점수 생성
                 isSuccess: detailsResult.isSuccess,
                 statusCode: detailsResult.statusCode,
                 isMalicious: detailsResult.isMalicious,
@@ -81,11 +103,11 @@
                     { name: 'ADMINUSLabs', status: 'Clean' },
                     { name: 'AegisLab', status: 'Malicious' },
                     { name: 'AlienVault', status: 'Clean' },
-                    // ... 더 많은 더미 데이터
                 ]
             };
   
-            searchHistory.saveSearchHistory(urlToAnalyze, results.statusCode);
+            searchHistory.saveSearchHistory(urlToAnalyze, results.statusCode, currentHash);
+
         } catch (err) {
             console.error('결과 가져오기 오류:', err);
             error = err.message;
@@ -94,10 +116,17 @@
         }
     }
 
-    function handleSubmit() {
+    async function handleSubmit() {
         if (url) {
-            goto(`/results?url=${encodeURIComponent(url)}`);
-            fetchResults(url);
+            const newUrlHash = await sha256(url);
+            
+            // URL과 해시값을 localStorage에 저장
+            const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
+            urlMap[newUrlHash] = url;
+            localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
+
+            goto(`/results?${newUrlHash}`);
+            await fetchResults(url, newUrlHash);
         }
     }
 </script>
