@@ -1,11 +1,13 @@
-const API_BASE_URL = '/apis';
+const API_BASE_URL = 'http://localhost:8000/apis';
 
 async function fetchWithErrorHandling(url, options = {}) {
     try {
         const response = await fetch(url, {
             ...options,
-            mode: 'cors',
-            credentials: 'include', // 필요한 경우 인증 정보 포함
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            }
         });
         
         console.log('Request URL:', url);
@@ -53,14 +55,14 @@ export const api = {
             body: JSON.stringify(requestBody),
         });
         
-        if (response.is_success) {
+        if (response && response.status === 200) {
             return {
-                isSuccess: response.is_success,
-                statusCode: response.status_code,
+                isSuccess: true,
+                statusCode: response.status,
                 urlUuid: response.url_uuid
             };
         } else {
-            throw new Error(`API 요청 실패: ${response.status_code}`);
+            throw new Error(`API 요청 실패: ${response.status}`);
         }
     },
 
