@@ -170,7 +170,7 @@
     }
 </script>
 
-<div class="min-h-screen bg-gray-100">
+<div class="w-full min-h-screen bg-gray-100 pb-40">
     <!-- 배경 이미지와 오버레이 -->
     <div class="absolute inset-0 z-0">
         <div class="absolute h-[35vh] inset-0 bg-gradient-overlay"></div>
@@ -181,7 +181,7 @@
     <div class="text-center pt-12 pb-8 relative z-1">
         <div class="mb-6">
             <img 
-                src="src/lib/images/bmw-logo.png" 
+                src="/images/bmw-logo.png" 
                 alt="bmw" 
                 class="h-28 mx-auto"
             />
@@ -216,7 +216,7 @@
                         {:else}
                             <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                                 <img 
-                                    src="src/lib/images/search.png" 
+                                    src="/images/search.png" 
                                     alt="search" 
                                     class="w-8 h-8"
                                 />
@@ -236,7 +236,7 @@
     <div class="relative max-w-7xl mx-auto mt-40 bg-white rounded-lg shadow-lg overflow-hidden pb-4">
         <div class="p-6">
             <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                <img src="src/lib/images/warning.png" alt="warning" class="w-10 h-10" />
+                <img src="/images/warning.png" alt="warning" class="w-10 h-10" />
                 최근 분석 현황
             </h2>
             <div class="overflow-x-auto">
@@ -291,7 +291,7 @@
 
 <style>
     .bg-gradient-overlay {
-        background-image: url('src/lib/images/background.jpg');
+        background-image: url('/images/background.jpg');
         background-size: cover;
         background-position: center;
     }

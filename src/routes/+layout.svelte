@@ -38,7 +38,7 @@
 <div class="min-h-screen flex flex-col bg-white text-black">
     <nav class="fixed top-0 left-0 right-0 bg-white p-4 shadow-md z-50 flex justify-between items-center">
         <a href="/" class="flex items-center"> 
-            <img src="src/lib/images/lucky_logo_row.png" alt="Malicious URL Detector" class="h-9" />
+            <img src="/images/lucky_logo_row.png" alt="Malicious URL Detector" class="h-9" />
         </a>
         <div class="flex items-center space-x-4">
             {#if $page.url.pathname !== '/'}
@@ -115,7 +115,7 @@
             <div class="flex items-start justify-between">
                 <!-- 로고와 버전 정보 -->
                 <div class="flex items-center gap-2">
-                    <img src="src/lib/images/lucky_logo_row.png" alt="Logo" class="h-6" />
+                    <img src="/images/lucky_logo_row.png" alt="Logo" class="h-6" />
                     <span class="text-gray-400">v1.0.0</span>
                 </div>
 
