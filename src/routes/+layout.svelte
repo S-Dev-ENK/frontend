@@ -81,7 +81,7 @@
             </a>
     
             <a 
-                href="/api" 
+                href="www.naver.com" 
                 class="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 {$page.url.pathname === '/api' ? 'bg-gray-100' : ''}"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
@@ -97,7 +97,7 @@
             </a>
     
             <a 
-                href="/blog" 
+                href="www.naver.com" 
                 class="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 {$page.url.pathname === '/blog' ? 'bg-gray-100' : ''}"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
