@@ -33,7 +33,7 @@ async function fetchWithErrorHandling(url, options = {}) {
         throw error;
     }
 }
-
+// 아아아아
 export const api = {
     analyzeUrl: async (requestedUrl) => {
         const requestBody = {
