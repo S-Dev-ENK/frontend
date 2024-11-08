@@ -9,120 +9,6 @@
     let isAnalyzing = false;
     let error = null;
 
-    // 더미 데이터
-    const recentAnalyses = [
-        {
-            no: 1,
-            date: "2024-11-01 00:06:01",
-            domain: "http://57.181.32.253/",
-            title: "대검찰청 - 대검찰청",
-            status: "Online",
-            resourceCount: 80,
-            linkCount: 8,
-            tags: ["phishing", "malware"],
-            country: "Japan"
-        },
-        {
-            no: 2,
-            date: "2024-10-31 23:39:31",
-            domain: "http://61.223.142.170/",
-            title: "대검찰청",
-            status: "Offline",
-            resourceCount: 50,
-            linkCount: 7,
-            tags: ["phishing", "malware"],
-            country: "Taiwan"
-        },
-        {
-            no: 3,
-            date: "2024-10-31 23:37:10",
-            domain: "http://트윈.com/",
-            title: "",
-            status: "Online",
-            resourceCount: 7,
-            linkCount: 2,
-            tags: ["normal"],
-            country: ""
-        },
-        {
-            no: 4,
-            date: "2024-10-31 23:36:58",
-            domain: "https://overseas.mofa.go.kr/th-ko/br",
-            title: "외교부",
-            status: "Online",
-            resourceCount: 6,
-            linkCount: 370,
-            tags: ["normal"],
-            country: "Korea, Republic of"
-        },
-        {
-            no: 5,
-            date: "2024-10-31 23:36:44",
-            domain: "https://tdeal.kr/app/HT8V3I?seq=11581415969&date=241031",
-            title: "SKT와 함께하는 바로 사는 중...",
-            status: "Online",
-            resourceCount: 7,
-            linkCount: 9,
-            tags: ["normal"],
-            country: "United States"
-        },
-        {
-            no: 6,
-            date: "2024-10-31 22:16:31",
-            domain: "http://114.41.74.179/",
-            title: "대검찰청",
-            status: "Online",
-            resourceCount: 50,
-            linkCount: 7,
-            tags: ["phishing", "malware"],
-            country: "Taiwan"
-        },
-        {
-            no: 7,
-            date: "2024-10-31 22:04:51",
-            domain: "https://patgosales.com/collections/women-s-hats-accessories?page=2",
-            title: "Women's Hats & Accessorie...",
-            status: "Online",
-            resourceCount: 11,
-            linkCount: 413,
-            tags: ["fraud"],
-            country: ""
-        },
-        {
-            no: 8,
-            date: "2024-10-31 21:05:04",
-            domain: "https://bet556.cc/",
-            title: "",
-            status: "Online",
-            resourceCount: 3,
-            linkCount: 0,
-            tags: ["fraud"],
-            country: "United States"
-        },
-        {
-            no: 9,
-            date: "2024-10-31 20:57:34",
-            domain: "https://www.naver.com/",
-            title: "",
-            status: "Offline",
-            resourceCount: 0,
-            linkCount: 0,
-            tags: ["portal"],
-            country: ""
-        },
-        {
-            no: 10,
-            date: "2024-10-31 20:27:47",
-            domain: "https://0070.co.kr/c/Hc03b",
-            title: "Not Found",
-            status: "Online",
-            resourceCount: 1,
-            linkCount: 0,
-            tags: ["normal"],
-            country: "Korea, Republic of"
-        }
-    ];
-
     async function sha256(message) {
         const msgBuffer = new TextEncoder().encode(message);
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -132,27 +18,53 @@
     }
 
     async function handleSubmit() {
-        if (url && !isAnalyzing) {
-            isAnalyzing = true;
-            error = null;
+    if (url && !isAnalyzing) {
+        isAnalyzing = true;
+        error = null;
+        
+        try {
+            // API 호출 부분 주석 처리
+            /*const result = await api.analyzeUrl(url);
+            const urlHash = await sha256(url);
             
-            try {
-                const result = await api.analyzeUrl(url);
-                const urlHash = await sha256(url);
-                
-                const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
-                urlMap[urlHash] = url;
-                localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
+            // searchHistory 스토어에 새로운 분석 결과 추가
+            searchHistory.addSearch({
+                url: url,
+                title: result.title || '',
+                status: result.status || 'Online',
+                resourceCount: result.resourceCount || 0,
+                linkCount: result.linkCount || 0,
+                tags: result.tags || ['normal'],
+                country: result.country || ''
+            });*/
 
-                goto(`/results?hash=${urlHash}`);
-            } catch (err) {
-                console.error('URL 분석 중 오류 발생:', err);
-                error = 'URL 분석 중 오류가 발생했습니다. 다시 시도해주세요.';
-            } finally {
-                isAnalyzing = false;
-            }
+            // 임시로 더미 데이터 추가
+            const urlHash = await sha256(url);
+            searchHistory.addSearch({
+                url: url,
+                title: 'Test Title',
+                status: 'Online',
+                resourceCount: 100,
+                linkCount: 50,
+                tags: ['normal'],
+                country: 'South Korea'
+            });
+
+            const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
+            urlMap[urlHash] = url;
+            localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
+
+            goto(`/results?hash=${urlHash}`);
+        } catch (err) {
+            // 에러가 발생해도 results 페이지로 이동
+            console.error('URL 분석 중 오류 발생:', err);
+            const urlHash = await sha256(url);
+            goto(`/results?hash=${urlHash}`);
+        } finally {
+            isAnalyzing = false;
         }
     }
+}
 
     function getStatusClass(status) {
         return status === 'Online' ? 'bg-green-500' : 'bg-gray-500';
@@ -168,134 +80,198 @@
             default: return 'bg-gray-400';
         }
     }
+
+    // 컴포넌트 마운트 시 searchHistory 로드
+    onMount(() => {
+        searchHistory.loadSearchHistory();
+    });
 </script>
 
+<!-- 배경 이미지 오버레이 부분 수정 -->
 <div class="w-full min-h-screen bg-gray-100 pb-40">
     <!-- 배경 이미지와 오버레이 -->
     <div class="absolute inset-0 z-0">
-        <div class="absolute h-[35vh] inset-0 bg-gradient-overlay"></div>
+        <div class="absolute search-height-overlay bg-gradient-overlay"></div>
     </div>
 
-    <!-- 컨텐츠 -->
-    <!-- 헤더 섹션 -->
-    <div class="text-center pt-12 pb-8 relative z-1">
-        <div class="mb-6">
-            <img 
-                src="/images/bmw-logo.png" 
-                alt="bmw" 
-                class="h-28 mx-auto"
-            />
+       <!-- 헤더와 검색 섹션을 하나의 컨테이너로 묶기 -->
+       <div class="header-search-container relative z-1">
+        <!-- 헤더 섹션 -->
+        <div class="text-center pt-12">
+            <div class="mb-6">
+                <img 
+                    src="/images/bmw-logo.png" 
+                    alt="bmw" 
+                    class="h-28 mx-auto"
+                />
+            </div>
+            <div class="relative">
+                <h1 class="text-3xl font-bold mb-4 text-white">악성 URL 탐지 및 분석 서비스</h1>
+                <p class="text-lg font-bold text-gray-100 mb-6 mx-auto max-w-4xl">
+                    Domain info,YARA, DNS Foot printing 등의 분석기법을 통해 악성 URL로 인한<br/>
+                    사이버 위협을 유사도 분석 기술과 사회공학기법을 융합하여 탐지하고 분석합니다.
+                </p>
+            </div>
         </div>
-        <div class="relative z-1">
-            <h1 class="text-3xl font-bold mb-4 text-white">악성 URL 탐지 및 분석 서비스</h1>
-            <p class="text-lg font-bold text-gray-100 mb-6">
-                Domain info,YARA, DNS Foot printing 등의 분석기법을 통해 악성 URL로 인한<br/>
-                사이버 위협을 유사도 분석 기술과 사회공학기법을 융합하여 탐지하고 분석합니다.
-            </p>
-        </div>
-    </div>
 
-    <!-- 검색 섹션 -->
-    <div class="absolute left-0 right-0 top-[35vh] -translate-y-1/2">
-        <div class="max-w-6xl mx-auto">
-            <form on:submit|preventDefault={handleSubmit} class="relative" in:fade>
-                <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-16">
-                    <input
-                        bind:value={url}
-                        type="text"
-                        class="flex-1 pl-6 pr-12 py-4 text-gray-700 focus:outline-none rounded-full"
-                        placeholder="Domain, URL을 입력하세요"
-                    />
-                    <button
-                        type="submit"
-                        class="search-button"
-                        disabled={isAnalyzing}
-                    >
-                        {#if isAnalyzing}
-                            <div class="loader"></div>
-                        {:else}
-                            <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                                <img 
-                                    src="/images/search.png" 
-                                    alt="search" 
-                                    class="w-8 h-8"
-                                />
-                            </div>
-                        {/if}
-                    </button>
-                </div>
-            </form>
-
-            {#if error}
-                <p class="text-red-300 mt-4 text-center">{error}</p>
-            {/if}
+        <!-- 검색 섹션 -->
+        <div class="search-section">
+            <div class="max-w-6xl mx-auto px-4">
+                <form on:submit|preventDefault={handleSubmit} class="relative" in:fade>
+                    <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-16">
+                        <input
+                            bind:value={url}
+                            type="text"
+                            class="flex-1 pl-6 pr-12 py-4 text-gray-700 focus:outline-none rounded-full"
+                            placeholder="Domain, URL을 입력하세요"
+                        />
+                        <button
+                            type="submit"
+                            class="search-button"
+                            disabled={isAnalyzing}
+                        >
+                            {#if isAnalyzing}
+                                <div class="loader"></div>
+                            {:else}
+                                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                                    <img 
+                                        src="/images/search.png" 
+                                        alt="search" 
+                                        class="w-8 h-8"
+                                    />
+                                </div>
+                            {/if}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- 최근 분석 현황 테이블 -->
-    <div class="relative max-w-7xl mx-auto mt-40 bg-white rounded-lg shadow-lg overflow-hidden pb-4">
+   <!-- 최근 분석 현황 테이블 부분 수정 -->
+   <div class="relative w-[95%] max-w-screen-2xl mx-auto mt-40 bg-white rounded-lg shadow-lg overflow-hidden pb-4 fixed-content mb-8">
         <div class="p-6">
             <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
                 <img src="/images/warning.png" alt="warning" class="w-10 h-10" />
                 최근 분석 현황
             </h2>
             <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">No.</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">날짜</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">Domain/URL</th>
-                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">Title</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">상태</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">리소스 수</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">링크 수</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">태그</th>
-                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">국가</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        {#each recentAnalyses as analysis}
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3 text-sm text-gray-900">{analysis.no}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900">{analysis.date}</td>
-                                <td class="px-4 py-3 text-sm text-blue-600 hover:underline">
-                                    <a href={analysis.domain}>{analysis.domain}</a>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900">{analysis.title}</td>
-                                <td class="px-4 py-3 text-sm">
-                                    <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full text-white {getStatusClass(analysis.status)}">
-                                        {analysis.status}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-center">{analysis.resourceCount}</td>
-                                <td class="px-4 py-3 text-sm text-center">{analysis.linkCount}</td>
-                                <td class="px-4 py-3 text-sm">
-                                    <div class="flex gap-1 justify-center">
-                                        {#each analysis.tags as tag}
-                                            <span class="px-2 py-1 text-xs font-medium rounded-md text-white {getTagClass(tag)}">
-                                                {tag}
-                                            </span>
-                                        {/each}
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-center">{analysis.country}</td>
+                {#if $searchHistory.length === 0}
+                    <p class="text-center text-gray-500 py-4">최근 분석 기록이 없습니다.</p>
+                {:else}
+                    <table class="w-full">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">No.</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">날짜</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">Domain/URL</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">Title</th>
+                                <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">상태</th>
+                                <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">리소스 수</th>
+                                <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">링크 수</th>
+                                <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">태그</th>
+                                <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">국가</th>
                             </tr>
-                        {/each}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {#each $searchHistory as analysis}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-sm text-gray-900">{analysis.no}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">{analysis.date}</td>
+                                    <td class="px-4 py-3 text-sm text-blue-600 hover:underline">
+                                        <a href={`/results?url=${encodeURIComponent(analysis.domain)}`}>{analysis.domain}</a>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">{analysis.title}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full text-white {getStatusClass(analysis.status)}">
+                                            {analysis.status}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-center">{analysis.resourceCount}</td>
+                                    <td class="px-4 py-3 text-sm text-center">{analysis.linkCount}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        <div class="flex gap-1 justify-center">
+                                            {#each analysis.tags as tag}
+                                                <span class="px-2 py-1 text-xs font-medium rounded-md text-white {getTagClass(tag)}">
+                                                    {tag}
+                                                </span>
+                                            {/each}
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-center">{analysis.country}</td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                {/if}
+            </div>
+        </div>
+    </div>
+</div>
+ <!-- Footer 추가 -->
+<div class="w-full bg-white text-gray-600 text-xs border-t-4">
+    <div class="mx-auto p-4">
+        <div class="flex flex-col gap-2">
+            <!-- 로고 섹션 -->
+            <div class="flex items-center gap-2 mb-2">
+                <img src="/images/lucky_logo_row.png" alt="Logo" class="h-6" />
+                <span class="text-gray-400">v1.0.0</span>
+            </div>
+            
+            <!-- 정보 섹션 -->
+            <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span>이용약관</span>
+                    <span class="text-gray-300">|</span>
+                    <span>개인정보처리방침</span>
+                    <span class="text-gray-300">|</span>
+                    <span class="text-blue-800 font-bold">사업자번호:</span>
+                    <span>000-00-00000</span>
+                </div>
+                
+                <div class="text-gray-500">
+                    <span>(05717) 서울 송파구 중대로 135 서관 14층 (재)한국정보보호산업협회, KISIA</span>
+                </div>
+                
+                <div class="flex items-center gap-2 text-gray-500 flex-wrap">
+                    <span class = "text-blue-800 font-bold">대표이사:</span>
+                    <span>KISIA</span>
+                    <span class="text-gray-300">|</span>
+                    <span class = "text-blue-800 font-bold">대표전화:</span>
+                    <span>02-0000-0000</span>
+                    <span class="text-gray-300">|</span>
+                    <span class = "text-blue-800 font-bold">기술지원:</span>
+                    <span>02-0000-0000</span>
+                    <span class="text-gray-300">|</span>
+                    <span class = "text-blue-800 font-bold">팩스:</span>
+                    <span>02-0000-0000</span>
+                </div>
+                
+                <div class="text-gray-500">
+                    <span>이메일: luckybicky@luckybicky.com</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-    .bg-gradient-overlay {
+    .header-search-container {
+        height: 500px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding-bottom: 100px;
+    }
+
+    .search-height-overlay {
+        height: 450px;
+        width: 100%;
         background-image: url('/images/background.jpg');
         background-size: cover;
         background-position: center;
     }
-    
+
     .search-button {
         position: absolute;
         right: 8px;
@@ -306,6 +282,7 @@
         background: none;
         cursor: pointer;
         transition: all 0.2s ease;
+        z-index: 1;
     }
 
     .search-button:hover {
@@ -325,8 +302,82 @@
         animation: spin 1s linear infinite;
     }
 
+    .fixed-content {
+        min-width: 320px;
+        max-height: calc(100vh - 12rem);
+        overflow-y: auto;
+        margin-bottom: 2rem;
+        position: relative;
+        z-index: 1;
+    }
+
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
+    }
+
+    /* 반응형 디자인 */
+    @media (max-width: 640px) {
+        .header-search-container {
+            height: 550px;
+            padding-bottom: 80px;
+        }
+
+        .search-height-overlay {
+            height: 550px;
+        }
+
+        .fixed-content {
+            width: 95%;
+            margin: 2rem auto;
+        }
+    }
+
+    @media (min-width: 641px) and (max-width: 1024px) {
+        .header-search-container {
+            height: 520px;
+            padding-bottom: 90px;
+        }
+
+        .search-height-overlay {
+            height: 520px;
+        }
+
+        .fixed-content {
+            width: 90%;
+            margin: 3rem auto;
+        }
+    }
+
+    @media (min-width: 1025px) {
+        .fixed-content {
+            width: 85%;
+            max-width: 1920px;
+            margin: 4rem auto;
+        }
+    }
+
+    /* 테이블 스타일링 */
+    :global(.overflow-x-auto) {
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        position: relative;
+    }
+
+    :global(.overflow-x-auto::-webkit-scrollbar) {
+        height: 6px;
+    }
+
+    :global(.overflow-x-auto::-webkit-scrollbar-track) {
+        background: #f1f1f1;
+    }
+
+    :global(.overflow-x-auto::-webkit-scrollbar-thumb) {
+        background: #888;
+        border-radius: 3px;
+    }
+
+    :global(.overflow-x-auto::-webkit-scrollbar-thumb:hover) {
+        background: #555;
     }
 </style>

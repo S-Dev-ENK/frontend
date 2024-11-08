@@ -1,5 +1,4 @@
 // src/lib/stores/searchHistory.js
-
 import { writable } from 'svelte/store';
 
 function createSearchHistory() {
@@ -7,34 +6,35 @@ function createSearchHistory() {
 
     return {
         subscribe,
-        saveSearchHistory: (url, score, hash) => {
-            update(history => {
-                const newHistory = [{
-                    url,
-                    hash,
-                    score,
-                    timestamp: new Date().toISOString()
-                }, ...history];
-                
-                if (newHistory.length > 10) {
-                    newHistory.pop();
-                }
-                
-                localStorage.setItem('searchHistory', JSON.stringify(newHistory));
-                return newHistory;
-            });
-        },
+        addSearch: (data) => update(items => {
+            const newItem = {
+                no: items.length + 1,
+                date: new Date().toLocaleString(),
+                domain: data.url,
+                title: data.title || '',
+                status: 'Online',
+                resourceCount: data.resourceCount || 0,
+                linkCount: data.linkCount || 0,
+                tags: data.tags || ['normal'],
+                country: data.country || ''
+            };
+            return [newItem, ...items].slice(0, 10); // 최근 10개만 유지
+        }),
         loadSearchHistory: () => {
-            const savedHistory = localStorage.getItem('searchHistory');
-            if (savedHistory) {
-                set(JSON.parse(savedHistory));
+            const stored = localStorage.getItem('searchHistory');
+            if (stored) {
+                set(JSON.parse(stored));
             }
         },
-        clearHistory: () => {
-            set([]);
-            localStorage.removeItem('searchHistory');
-        }
+        clearHistory: () => set([])
     };
 }
 
 export const searchHistory = createSearchHistory();
+
+// localStorage와 동기화
+searchHistory.subscribe(value => {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('searchHistory', JSON.stringify(value));
+    }
+});
