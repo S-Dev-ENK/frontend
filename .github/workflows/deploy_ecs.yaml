@@ -1,0 +1,46 @@
+name: Deploy Frontend to Lightsail
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+
+env:
+  AWS_REGION: ap-northeast-2
+  INSTANCE_NAME: frontend-instance
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Deploy to Lightsail
+      env:
+        PUBLIC_IP: ${{ secrets.PUBLIC_IP }}
+        BACKEND_PORT: ${{ secrets.BACKEND_PORT }}
+        CORE_PORT: ${{ secrets.CORE_PORT }}
+        FRONTEND_PORT: ${{ secrets.FRONTEND_PORT }}
+      run: |
+        # 환경 변수 설정
+        echo "VITE_PUBLIC_IP=$PUBLIC_IP" > .env
+        echo "VITE_BACKEND_PORT=$BACKEND_PORT" >> .env
+        echo "VITE_CORE_PORT=$CORE_PORT" >> .env
+        echo "VITE_FRONTEND_PORT=$FRONTEND_PORT" >> .env
+
+        # Node.js 설치 및 빌드
+        cd frontend
+        npm install
+        npm run build
+        
+        # 서버 실행
+        npm run preview -- --host 0.0.0.0 --port $FRONTEND_PORT
