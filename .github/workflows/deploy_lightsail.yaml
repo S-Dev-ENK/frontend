@@ -38,7 +38,7 @@ jobs:
         echo "VITE_FRONTEND_PORT=$FRONTEND_PORT" >> .env
 
         # Node.js 설치 및 빌드
-        cd frontend
+        cd app/frontend
         npm install
         npm run build
         
