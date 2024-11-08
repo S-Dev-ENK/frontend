@@ -1,0 +1,57 @@
+name: Frontend Deploy to Lightsail
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+
+env:
+  AWS_REGION: ap-northeast-2
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Install Dependencies
+      run: npm install
+        
+    - name: Build
+      run: npm run build
+
+    - name: Deploy to Lightsail
+      run: |
+        aws lightsail create-instance \
+          --instance-name frontend-instance \
+          --availability-zone ${AWS_REGION}a \
+          --blueprint-id nodejs \
+          --bundle-id nano_2_0
+
+        # 빌드된 파일 전송
+        aws lightsail put-instance-public-ports \
+          --instance-name frontend-instance \
+          --port-infos fromPort=80,toPort=80,protocol=TCP
+
+        # 배포 스크립트 실행
+        aws lightsail get-instance \
+          --instance-name frontend-instance \
+          --query 'instance.publicIpAddress' \
+          --output text | xargs -I {} scp -r ./build/* bitnami@{}:/home/bitnami/stack/nginx/html/
