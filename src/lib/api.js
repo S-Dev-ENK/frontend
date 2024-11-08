@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/apis';
+const API_BASE_URL = '/apis';
 
 async function fetchWithErrorHandling(url, options = {}) {
     try {
