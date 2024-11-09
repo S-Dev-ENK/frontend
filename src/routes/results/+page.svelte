@@ -11,7 +11,8 @@
 
     ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
-    let url = '';
+    let searchUrl = ''; // URL 정보 표시용 변수와 검색용 변수를 분리
+    let displayUrl = ''; // 표시용 URL
     let results = null;
     let isAnalyzing = false;
     let error = null;
@@ -28,29 +29,40 @@
         return hashHex;
     }
 
+        // URL 해시값으로부터 결과 로드
+        async function loadResultsByHash(urlHash) {
+        try {
+            const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
+            displayUrl = urlMap[urlHash];
+
+            if (!displayUrl) {
+                error = 'URL 정보를 찾을 수 없습니다.';
+                return;
+            }
+
+            await fetchResults(displayUrl);
+        } catch (err) {
+            console.error('URL 복원 오류:', err);
+            error = 'URL 정보 복원에 실패했습니다.';
+        }
+    }
+
     onMount(async () => {
         const urlHash = $page.url.searchParams.get('hash');
         if (!urlHash) {
             error = '올바르지 않은 접근입니다.';
             return;
         }
-    
-
-        try {
-            const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
-            url = urlMap[urlHash];
-
-            if (!url) {
-                error = 'URL 정보를 찾을 수 없습니다.';
-                return;
-            }
-
-            await fetchResults(url);
-        } catch (err) {
-            console.error('URL 복원 오류:', err);
-            error = 'URL 정보 복원에 실패했습니다.';
-        }
+        await loadResultsByHash(urlHash);
     });
+
+    // URL 매개변수 변경 감지
+    $: {
+        const urlHash = $page.url.searchParams.get('hash');
+        if (urlHash) {
+            loadResultsByHash(urlHash);
+        }
+    }
 
     async function fetchResults(urlToAnalyze, currentHash) {
         isAnalyzing = true;
@@ -132,20 +144,36 @@
         }
     }
 
-    async function handleSubmit() {
-        if (url && !isAnalyzing) {
+    // 검색 처리 함수
+    async function handleSearch() {
+        if (searchUrl && !isAnalyzing) {
             isAnalyzing = true;
             error = null;
-
+            
             try {
-                const urlHash = await sha256(url);
+                const urlHash = await sha256(searchUrl);
+                
+                // 검색 기록 저장
+                searchHistory.addSearch({
+                    url: searchUrl,
+                    title: 'Test Title',
+                    status: 'Online',
+                    resourceCount: 100,
+                    linkCount: 50,
+                    tags: ['normal'],
+                    country: 'South Korea'
+                });
 
+                // URL 맵 업데이트
                 const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
-                urlMap[urlHash] = url;
+                urlMap[urlHash] = searchUrl;
                 localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
 
-                await fetchResults(url);
+                // 새 URL로 이동
                 goto(`/results?hash=${urlHash}`);
+                
+                // 검색창 초기화
+                searchUrl = '';
             } catch (err) {
                 console.error('URL 분석 중 오류 발생:', err);
                 error = 'URL 분석 중 오류가 발생했습니다.';
@@ -176,10 +204,10 @@
     <!-- 검색 섹션 -->
     <div class="bg-gradient-overlay relative h-[15vh] flex items-center">
         <div class="max-w-6xl mx-auto w-full px-4">
-            <form on:submit|preventDefault={handleSubmit} class="relative" in:fade>
+            <form on:submit|preventDefault={handleSearch} class="relative" in:fade>
                 <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-16">
                     <input
-                        bind:value={url}
+                        bind:value={searchUrl}
                         type="text"
                         class="flex-1 pl-6 pr-12 py-4 text-gray-700 focus:outline-none rounded-full"
                         placeholder="Domain, URL을 입력하세요"
@@ -277,7 +305,7 @@
                             <tbody class="divide-y">
                                 <tr>
                                     <td class="py-2 text-gray-600">URL</td>
-                                    <td class="py-2">{url}</td>
+                                    <td class="py-2">{displayUrl}</td> <!-- displayUrl 사용 -->
                                 </tr>
                                 <tr>
                                     <td class="py-2 text-gray-600">Title</td>

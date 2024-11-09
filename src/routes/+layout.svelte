@@ -12,25 +12,32 @@
     let searchHistoryRef;
 
     onMount(() => {
+    searchHistory.loadSearchHistory();
+
+    const handleClickOutside = (event) => {
+        if (exportMenuRef && !exportMenuRef.contains(event.target)) {
+            showExportMenu = false;
+        }
+        
+        if (searchHistoryRef && 
+            !searchHistoryRef.contains(event.target) && 
+            !event.target.closest('button')?.matches('[data-search-history-toggle]')) {
+            showSearchHistory = false;
+        }
+    };
+
+    // 브라우저 탐색 이벤트 감지
+    window.addEventListener('click', handleClickOutside);
+    window.addEventListener('popstate', () => {
         searchHistory.loadSearchHistory();
+    });
 
-        const handleClickOutside = (event) => {
-            if (exportMenuRef && !exportMenuRef.contains(event.target)) {
-                showExportMenu = false;
-            }
-            
-            if (searchHistoryRef && 
-                !searchHistoryRef.contains(event.target) && 
-                !event.target.closest('button')?.matches('[data-search-history-toggle]')) {
-                showSearchHistory = false;
-            }
-        };
-
-        window.addEventListener('click', handleClickOutside);
-
-        return () => {
-            window.removeEventListener('click', handleClickOutside);
-        };
+    return () => {
+        window.removeEventListener('click', handleClickOutside);
+        window.removeEventListener('popstate', () => {
+            searchHistory.loadSearchHistory();
+        });
+    };
     });
 
     function toggleSearchHistory(event) {

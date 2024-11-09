@@ -83,8 +83,21 @@
 
     // 컴포넌트 마운트 시 searchHistory 로드
     onMount(() => {
+    // 페이지 로드 시 검색 기록 로드
+    searchHistory.loadSearchHistory();
+
+    // 브라우저의 뒤로가기/앞으로가기 이벤트 감지
+    window.addEventListener('popstate', () => {
         searchHistory.loadSearchHistory();
     });
+
+    return () => {
+        window.removeEventListener('popstate', () => {
+            searchHistory.loadSearchHistory();
+        });
+    };
+    });
+
 </script>
 
 <!-- 배경 이미지 오버레이 부분 수정 -->
