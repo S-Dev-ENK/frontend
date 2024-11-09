@@ -8,7 +8,7 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2
-  INSTANCE_NAME: frontend-instance
+  INSTANCE_NAME: enk-project
 
 jobs:
   deploy:
@@ -38,9 +38,10 @@ jobs:
         echo "VITE_FRONTEND_PORT=$FRONTEND_PORT" >> .env
 
         # Node.js 설치 및 빌드
-        cd frontend
+        cd ~/app/frontend
         npm install
         npm run build
         
-        # 서버 실행
-        npm run preview -- --host 0.0.0.0 --port $FRONTEND_PORT
+        # 이전 프로세스 종료 후 서버 재시작
+        pkill -f "npm run preview" || true
+        nohup npm run preview -- --host 0.0.0.0 --port $FRONTEND_PORT &
