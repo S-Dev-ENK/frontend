@@ -1,7 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import fs from 'fs';
-import path from 'path';
 
 export default defineConfig({
     plugins: [sveltekit()],
@@ -17,7 +15,10 @@ export default defineConfig({
             }
         }
     },
+    ssr: {
+        noExternal: ['chart.js', '@sveltejs/kit/**']
+    },
     optimizeDeps: {
-        include: ['d3', 'topojson-client']
+        include: ['d3', 'topojson-client', 'jspdf', 'papaparse']
     }
 });
