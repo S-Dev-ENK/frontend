@@ -116,18 +116,34 @@
                         ]
                     }]
                 },
-                securityVendors: [
-                    { name: 'Kaspersky', status: 'Clean' },
-                    { name: 'McAfee', status: 'Clean' },
-                    { name: 'Symantec', status: 'Malicious' },
-                    { name: 'Trend Micro', status: 'Clean' },
-                    { name: 'ESET', status: 'unknown' },
-                    { name: 'Avast', status: 'Clean' },
-                    { name: 'BitDefender', status: 'Malicious' },
-                    { name: 'F-Secure', status: 'Clean' },
-                    { name: 'Sophos', status: 'unknown' },
-                    { name: 'Fortinet', status: 'Clean' }
-                ]
+                domainInfo: {
+                    registrar: {
+                        name: "GoDaddy.com, LLC",
+                        url: "http://www.godaddy.com"
+                    },
+                    dates: {
+                        creation: "2019-08-15",
+                        expiration: "2024-08-15"
+                    },
+                    nameservers: [
+                        "ns1.example.com",
+                        "ns2.example.com"
+                    ],
+                    registrant: {
+                        organization: "Example Organization",
+                        country: "KR",
+                        state: "Seoul",
+                        email: "admin@example.com"
+                    },
+                    certificate: {
+                        exists: true,
+                        issuer: "Let's Encrypt Authority X3",
+                        subject: "*.example.com",
+                        validFrom: "2024-01-01",
+                        validTo: "2024-03-31",
+                        algorithm: "SHA256withRSA"
+                    }
+            }
             };
 
             results = dummyResults;
@@ -144,6 +160,29 @@
         }
     }
 
+    // API 호출 함수 추가
+    async function fetchDomainInfo(url) {
+        try {
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    url,
+                    prompt: `Please provide WHOIS information for ${url} including: registrar, registration date, expiration date, nameservers, registrant information, and SSL certificate details if available. Format the response as JSON.`
+                })
+            });
+            
+            if (!response.ok) throw new Error('API 요청 실패');
+            
+            return await response.json();
+        } catch (error) {
+            console.error('도메인 정보 조회 실패:', error);
+            throw error;
+        }
+    }
+
     // 검색 처리 함수
     async function handleSearch() {
         if (searchUrl && !isAnalyzing) {
@@ -156,6 +195,7 @@
                 // 검색 기록 저장
                 searchHistory.addSearch({
                     url: searchUrl,
+                    urlHash: urlHash, // URL 해시 추가
                     title: 'Test Title',
                     status: 'Online',
                     resourceCount: 100,
@@ -202,14 +242,14 @@
 <!-- 메인 콘텐츠 영역 -->
 <div class="w-full min-h-screen bg-gray-100">
     <!-- 검색 섹션 -->
-    <div class="bg-gradient-overlay relative h-[15vh] flex items-center">
+    <div class="bg-gradient-overlay relative h-[12vh] sm:h-[15vh] flex items-center">
         <div class="max-w-6xl mx-auto w-full px-4">
             <form on:submit|preventDefault={handleSearch} class="relative" in:fade>
-                <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-16">
+                <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-12 sm:h-16">
                     <input
                         bind:value={searchUrl}
                         type="text"
-                        class="flex-1 pl-6 pr-12 py-4 text-gray-700 focus:outline-none rounded-full"
+                        class="flex-1 pl-4 sm:pl-6 pr-12 py-2 sm:py-4 text-sm sm:text-base text-gray-700 focus:outline-none rounded-full"
                         placeholder="Domain, URL을 입력하세요"
                     />
                     <button
@@ -220,11 +260,11 @@
                         {#if isAnalyzing}
                             <div class="loader"></div>
                         {:else}
-                            <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                            <div class="w-8 h-8 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center">
                                 <img 
                                     src="/images/search.png" 
                                     alt="search" 
-                                    class="w-8 h-8"
+                                    class="w-5 h-5 sm:w-8 sm:h-8"
                                 />
                             </div>
                         {/if}
@@ -237,10 +277,10 @@
     <!-- 탭 네비게이션 -->
     <div class="border-b bg-white">
         <div class="max-w-7xl mx-auto px-4">
-            <nav class="flex space-x-8">
+            <nav class="flex space-x-4 sm:space-x-8 overflow-x-auto hide-scrollbar">
                 {#each tabs as tab}
                     <button
-                        class="px-4 py-4 border-b-2 font-medium text-sm transition-colors relative
+                        class="px-3 sm:px-4 py-3 sm:py-4 border-b-2 text-sm sm:text-base font-medium transition-colors relative whitespace-nowrap
                             {activeTab === tab 
                                 ? 'border-blue-500 text-blue-600' 
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
@@ -257,116 +297,218 @@
     </div>
 
     <!-- 분석 결과 콘텐츠 -->
-    <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:py-6">
         {#if isAnalyzing}
-            <div class="flex flex-col items-center justify-center py-12">
-                <svg class="animate-spin h-16 w-16 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div class="flex flex-col items-center justify-center py-8 sm:py-12">
+                <svg class="animate-spin h-12 w-12 sm:h-16 sm:w-16 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p class="mt-4 text-xl text-gray-600">URL을 분석하는 중입니다...</p>
+                <p class="mt-4 text-base sm:text-xl text-gray-600">URL을 분석하는 중입니다...</p>
             </div>
         {:else if error}
-            <div class="text-center py-12">
-                <p class="text-xl text-red-500">{error}</p>
+            <div class="text-center py-8 sm:py-12">
+                <p class="text-base sm:text-xl text-red-500">{error}</p>
             </div>
         {:else if results}
             {#if activeTab === 'Summary'}
-                <div class="grid grid-cols-12 gap-6">
-                    <!-- 분석 결과 카드 부분 수정 -->
-                    <div class="col-span-4 bg-white rounded-lg shadow p-6">
-                        <h2 class="flex items-center gap-2 text-lg font-medium text-gray-900 mb-4">
-                            <img src="/images/result.png" alt="분석 결과" class="w-8 h-8" />
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+                    <!-- 분석 결과 카드 -->
+                    <div class="lg:col-span-4 bg-white rounded-lg shadow p-4 sm:p-6">
+                        <h2 class="flex items-center gap-2 text-base sm:text-lg font-medium text-gray-900 mb-4">
+                            <img src="/images/result.png" alt="분석 결과" class="w-6 h-6 sm:w-8 sm:h-8" />
                             분석 결과
                         </h2>
                         <div class="flex flex-col items-center justify-center">
-                            <!-- 원형 결과 표시 영역 -->
-                            <div class="relative w-48 h-48">
-                                <!-- 바깥쪽 원 -->
+                            <div class="relative w-32 h-32 sm:w-48 sm:h-48">
                                 <div class="absolute inset-0 rounded-full border-4 {getStatusColor(status)}"></div>
-                                
-                                <!-- 안쪽 흰색 배경과 텍스트 -->
                                 <div class="absolute inset-2 rounded-full bg-white flex items-center justify-center">
-                                    <span class="text-2xl font-medium {getStatusColor(status)}">{status}</span>
+                                    <span class="text-xl sm:text-2xl font-medium {getStatusColor(status)}">{status}</span>
                                 </div>
                             </div>
-                            
-                            <!-- 최근 스캔 시간 -->
-                            <div class="mt-4 text-sm text-gray-500">
+                            <div class="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500">
                                 최근 스캔 시간: {new Date().toLocaleString()}
                             </div>
                         </div>
                     </div>
 
                     <!-- URL 정보 카드 -->
-                    <div class="col-span-8 bg-white rounded-lg shadow p-6">
-                        <h2 class="text-lg font-medium text-gray-900 mb-4">URL 정보</h2>
-                        <table class="w-full">
-                            <tbody class="divide-y">
-                                <tr>
-                                    <td class="py-2 text-gray-600">URL</td>
-                                    <td class="py-2">{displayUrl}</td> <!-- displayUrl 사용 -->
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-gray-600">Title</td>
-                                    <td class="py-2">{results.info1}</td>
-                                </tr>
-                                <tr>
-                                    <td class="py-2 text-gray-600">상태</td>
-                                    <td class="py-2">
-                                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">normal</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- 차트 영역 -->
-                    <div class="col-span-12 grid grid-cols-2 gap-6">
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h2 class="text-lg font-medium text-gray-900 mb-4">파이 차트</h2>
-                            <div class="h-64">
-                                <Pie data={results.pieChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h2 class="text-lg font-medium text-gray-900 mb-4">바 차트</h2>
-                            <div class="h-64">
-                                <Bar data={results.barChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 보안 벤더 분석 -->
-                    <div class="col-span-12 bg-white rounded-lg shadow p-6">
-                        <h2 class="text-lg font-medium text-gray-900 mb-4">보안 벤더 분석</h2>
+                    <div class="lg:col-span-8 bg-white rounded-lg shadow p-4 sm:p-6">
+                        <h2 class="text-base sm:text-lg font-medium text-gray-900 mb-4">URL 정보</h2>
                         <div class="overflow-x-auto">
                             <table class="w-full">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">벤더</th>
-                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">상태</th>
-                                    </tr>
-                                </thead>
                                 <tbody class="divide-y">
-                                    {#each results.securityVendors as vendor}
-                                        <tr>
-                                            <td class="px-4 py-3">{vendor.name}</td>
-                                            <td class="px-4 py-3">
-                                                <span class="px-3 py-1 rounded-full text-sm font-medium
-                                                    {vendor.status === 'Clean' ? 'bg-green-100 text-green-800' : 
-                                                    vendor.status === 'Malicious' ? 'bg-red-100 text-red-800' : 
-                                                    'bg-yellow-100 text-yellow-800'}">
-                                                    {vendor.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    {/each}
+                                    <tr>
+                                        <td class="py-2 sm:py-3 text-sm sm:text-base text-gray-600 w-24 sm:w-32">URL</td>
+                                        <td class="py-2 sm:py-3 text-sm sm:text-base break-all">{displayUrl}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 sm:py-3 text-sm sm:text-base text-gray-600">Title</td>
+                                        <td class="py-2 sm:py-3 text-sm sm:text-base">{results.info1}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 sm:py-3 text-sm sm:text-base text-gray-600">상태</td>
+                                        <td class="py-2 sm:py-3">
+                                            <span class="px-2 sm:px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs sm:text-sm">
+                                                normal
+                                            </span>
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
+
+                    <!-- 차트 영역 -->
+                    <div class="lg:col-span-6 bg-white rounded-lg shadow p-4 sm:p-6">
+                        <h2 class="text-base sm:text-lg font-medium text-gray-900 mb-4">파이 차트</h2>
+                        <div class="h-48 sm:h-64">
+                            <Pie data={results.pieChartData} options={{ 
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'right',
+                                        labels: {
+                                            font: {
+                                                size: window.innerWidth < 640 ? 10 : 12
+                                            }
+                                        }
+                                    }
+                                }
+                            }} />
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-6 bg-white rounded-lg shadow p-4 sm:p-6">
+                        <h2 class="text-base sm:text-lg font-medium text-gray-900 mb-4">바 차트</h2>
+                        <div class="h-48 sm:h-64">
+                            <Bar data={results.barChartData} options={{ 
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        labels: {
+                                            font: {
+                                                size: window.innerWidth < 640 ? 10 : 12
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        ticks: {
+                                            font: {
+                                                size: window.innerWidth < 640 ? 10 : 12
+                                            }
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            font: {
+                                                size: window.innerWidth < 640 ? 10 : 12
+                                            }
+                                        }
+                                    }
+                                }
+                            }} />
+                        </div>
+                    </div>
+
+                    <!-- 보안벤더 분석 섹션을 대체할 도메인 정보 섹션 -->
+            <div class="lg:col-span-12 bg-white rounded-lg shadow p-4 sm:p-6">
+                <h2 class="flex items-center gap-2 text-base sm:text-lg font-medium text-gray-900 mb-4">
+                    <img src="/images/domain-info.png" alt="도메인 정보" class="w-6 h-6 sm:w-8 sm:h-8" />
+                    도메인 기본 정보
+                </h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- 도메인 등록 정보 -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm sm:text-base font-medium text-gray-700">등록 정보</h3>
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <span class="text-gray-600">등록기관:</span>
+                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrar.name}</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <span class="text-gray-600">등록일:</span>
+                                <span class="col-span-2 text-gray-900">{new Date(results.domainInfo.dates.creation).toLocaleDateString()}</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <span class="text-gray-600">만료일:</span>
+                                <span class="col-span-2 text-gray-900">{new Date(results.domainInfo.dates.expiration).toLocaleDateString()}</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <span class="text-gray-600">네임서버:</span>
+                                <div class="col-span-2 space-y-1">
+                                    {#each results.domainInfo.nameservers as ns}
+                                        <span class="block text-gray-900">{ns}</span>
+                                    {/each}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 등록자 정보 -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm sm:text-base font-medium text-gray-700">등록자 정보</h3>
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <span class="text-gray-600">조직명:</span>
+                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.organization}</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <span class="text-gray-600">국가:</span>
+                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.country}</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <span class="text-gray-600">지역:</span>
+                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.state}</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-sm">
+                                <span class="text-gray-600">이메일:</span>
+                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.email}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SSL 인증서 정보 -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <h3 class="text-sm sm:text-base font-medium text-gray-700">SSL 인증서 정보</h3>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            {#if results.domainInfo.certificate.exists}
+                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <span class="block text-gray-600 mb-1">발급기관</span>
+                                        <span class="text-gray-900">{results.domainInfo.certificate.issuer}</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-gray-600 mb-1">발급대상</span>
+                                        <span class="text-gray-900">{results.domainInfo.certificate.subject}</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-gray-600 mb-1">유효기간</span>
+                                        <span class="text-gray-900">
+                                            {new Date(results.domainInfo.certificate.validFrom).toLocaleDateString()} ~ 
+                                            {new Date(results.domainInfo.certificate.validTo).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-gray-600 mb-1">암호화 알고리즘</span>
+                                        <span class="text-gray-900">{results.domainInfo.certificate.algorithm}</span>
+                                    </div>
+                                </div>
+                            {:else}
+                                <div class="text-center text-gray-500 py-2">
+                                    인증서 정보 없음
+                                </div>
+                            {/if}
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </div>
             
             {:else if activeTab === 'Resources'}
                 <div class="bg-white rounded-lg shadow p-6">
@@ -539,5 +681,33 @@
 
     .animate-pulse {
         animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .loader {
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top: 2px solid #ffffff;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 640px) {
+        .search-button {
+            transform: scale(0.8);
+        }
     }
 </style>
