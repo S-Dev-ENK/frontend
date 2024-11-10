@@ -1,6 +1,6 @@
 // src/lib/api.js
 const API_BASE_URL = import.meta.env.PROD 
-    ? '/apis'  // 직접적인 도메인 참조 대신 상대 경로 사용
+    ? '/apis'
     : '/apis';
 
 async function fetchWithErrorHandling(url, options = {}) {
@@ -11,7 +11,7 @@ async function fetchWithErrorHandling(url, options = {}) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
-            credentials: 'omit',  // CORS 설정
+            credentials: 'omit',
         });
         
         if (!response.ok) {
@@ -32,63 +32,83 @@ async function fetchWithErrorHandling(url, options = {}) {
     }
 }
 
-
 export const api = {
-   analyzeUrl: async (requestedUrl) => {
-       const requestBody = {
-           requested_url: requestedUrl,
-           redirect_urls: {
-               property1: "string",
-               property2: "string"
-           },
-           body: {}
-       };
+    analyzeUrl: async (requestedUrl) => {
+        const requestBody = {
+            requested_url: requestedUrl,
+            redirect_urls: {},  // 빈 객체로 수정
+            body: {}           // 빈 객체로 유지
+        };
 
-       try {
-           const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/`, {
-               method: 'POST',
-               body: JSON.stringify(requestBody),
-           });
-           
-           return {
-               isSuccess: true,
-               statusCode: response.status || 200,
-               urlUuid: response.url_uuid || ''
-           };
-       } catch (error) {
-           console.error('URL 분석 실패:', error);
-           return {
-               isSuccess: false,
-               statusCode: 500,
-               error: error.message
-           };
-       }
-   },
+        try {
+            const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/`, {
+                method: 'POST',
+                body: JSON.stringify(requestBody),
+            });
+            
+            return {
+                isSuccess: true,
+                statusCode: response.status || 200,
+                urlUuid: response.url_uuid || ''
+            };
+        } catch (error) {
+            console.error('URL 분석 실패:', error);
+            return {
+                isSuccess: false,
+                statusCode: error.status || 500,
+                error: error.message
+            };
+        }
+    },
 
-   getDomainDetails: async (urlUuid) => {
-       const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/details/?url_uuid=${encodeURIComponent(urlUuid)}`);
-       
-       return {
-           isSuccess: response.is_success,
-           statusCode: response.status_code,
-           isMalicious: response.malicious,
-           details: response.details
-       };
-   },
+    getDomainDetails: async (urlUuid) => {
+        try {
+            const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/details/?url_uuid=${encodeURIComponent(urlUuid)}`);
+            
+            return {
+                isSuccess: true,
+                statusCode: response.status_code,
+                isMalicious: response.malicious,
+                details: response.details
+            };
+        } catch (error) {
+            console.error('도메인 상세 정보 조회 실패:', error);
+            return {
+                isSuccess: false,
+                statusCode: 500,
+                error: error.message
+            };
+        }
+    },
 
-   getDomainStatus: async (urlUuid) => {
-       const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/status/?url_uuid=${encodeURIComponent(urlUuid)}`);
-       
-       return {
-           isSuccess: response.is_success,
-           statusCode: response.status_code,
-           status: response.status
-       };
-   },
+    getDomainStatus: async (urlUuid) => {
+        try {
+            const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/status/?url_uuid=${encodeURIComponent(urlUuid)}`);
+            
+            return {
+                isSuccess: true,
+                statusCode: response.status_code,
+                status: response.status
+            };
+        } catch (error) {
+            console.error('도메인 상태 조회 실패:', error);
+            return {
+                isSuccess: false,
+                statusCode: 500,
+                error: error.message
+            };
+        }
+    },
 
-   checkDomainHealth: async () => {
-       return fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/health`);
-   }
+    checkDomainHealth: async () => {
+        try {
+            const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/health`);
+            return response;
+        } catch (error) {
+            console.error('도메인 헬스 체크 실패:', error);
+            throw error;
+        }
+    }
 };
 
 export default api;

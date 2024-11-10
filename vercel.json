@@ -1,27 +1,12 @@
 {
     "rewrites": [
       {
-        "source": "/apis/:path*",
-        "destination": "https://enk-api.com/apis/:path*"
-      }
-    ],
-    "headers": [
+        "source": "/apis/malicious-domain",
+        "destination": "https://www.enk-api.com/apis/malicious-domain"
+      },
       {
-        "source": "/apis/(.*)",
-        "headers": [
-          {
-            "key": "Access-Control-Allow-Origin",
-            "value": "*"
-          },
-          {
-            "key": "Access-Control-Allow-Methods",
-            "value": "GET,POST,PUT,DELETE,OPTIONS"
-          },
-          {
-            "key": "Access-Control-Allow-Headers",
-            "value": "X-Requested-With, Access-Control-Allow-Headers, Content-Type, Accept"
-          }
-        ]
+        "source": "/apis/malicious-domain/:path*",
+        "destination": "https://www.enk-api.com/apis/malicious-domain/:path*"
       }
     ]
   }
