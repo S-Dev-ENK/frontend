@@ -1,5 +1,8 @@
 // src/lib/api.js
-const API_BASE_URL = '/apis';
+// src/lib/api.js
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://enk-api.com/apis'
+  : '/apis';
 
 async function fetchWithErrorHandling(url, options = {}) {
     try {
@@ -8,7 +11,10 @@ async function fetchWithErrorHandling(url, options = {}) {
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-            }
+                'Origin': process.env.VERCEL_URL || 'http://localhost:5173'
+            },
+            mode: 'cors',
+            credentials: 'include'
         });
         
         if (!response.ok) {
