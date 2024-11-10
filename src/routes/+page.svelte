@@ -99,6 +99,10 @@
 
 </script>
 
+<svelte:head>
+    <title>Main - Luckybicky</title>
+</svelte:head>
+
 <div class="w-full min-h-screen bg-gray-100 pb-20">
     <!-- 배경 이미지와 오버레이 -->
     <div class="absolute inset-0 z-0">

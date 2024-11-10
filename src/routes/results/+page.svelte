@@ -289,6 +289,10 @@
     // 상태 변수 (예시)
 </script>
 
+<svelte:head>
+    <title>Result - Luckybicky</title>
+</svelte:head>
+
 <!-- 메인 콘텐츠 영역 -->
 <div class="w-full min-h-screen bg-gray-100">
     <!-- 검색 섹션 -->

@@ -95,11 +95,11 @@
     
                 <!-- API 버튼 -->
                 <a 
-                    href="https://www.naver.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 whitespace-nowrap"
-                >
+                href="/api-service" 
+                class="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 whitespace-nowrap
+                    {$page.url.pathname === '/api-service' ? 'bg-gray-100' : ''}"
+                
+                    >
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" viewBox="0 0 24 24" fill="none" 
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect width="7" height="7" x="14" y="3" rx="1"/>
