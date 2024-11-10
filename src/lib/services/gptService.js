@@ -46,7 +46,7 @@ typosqutting도 고려해서 분석해주세요.(작은 오타도 고려해달�
     "similarDomains": [
         {
             "domain": string,
-            "similarity": number,
+            "similarity": number, // 0-100 사이의 유사도 숫자
             "riskLevel": string
         }
     ]

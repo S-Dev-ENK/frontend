@@ -11,7 +11,13 @@ function createSearchHistory() {
     if (typeof window !== 'undefined') {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
-            set(JSON.parse(stored));
+            const items = JSON.parse(stored);
+            // 저장된 데이터의 번호를 재할당
+            const updatedItems = items.map((item, index) => ({
+                ...item,
+                no: items.length - index // 역순으로 번호 할당
+            }));
+            set(updatedItems);
         }
     }
 
@@ -26,7 +32,7 @@ function createSearchHistory() {
             }
 
             const newItem = {
-                no: items.length + 1,
+                no: 1, // 새 항목은 항상 1번
                 date: new Date().toLocaleString(),
                 domain: data.url,
                 urlHash: data.urlHash,
@@ -38,20 +44,33 @@ function createSearchHistory() {
                 country: data.country || ''
             };
             
-            const updatedItems = [newItem, ...items].slice(0, 10);
+            // 기존 항목들의 번호를 1씩 증가
+            const updatedItems = items.map(item => ({
+                ...item,
+                no: item.no + 1
+            }));
+            
+            // 새 항목을 추가하고 최대 10개만 유지
+            const finalItems = [newItem, ...updatedItems].slice(0, 10);
             
             if (typeof window !== 'undefined') {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(finalItems));
             }
             
-            return updatedItems;
+            return finalItems;
         }),
         
         loadSearchHistory: () => {
             if (typeof window !== 'undefined') {
                 const stored = localStorage.getItem(STORAGE_KEY);
                 if (stored) {
-                    set(JSON.parse(stored));
+                    const items = JSON.parse(stored);
+                    // 로드할 때마다 번호를 재할당
+                    const updatedItems = items.map((item, index) => ({
+                        ...item,
+                        no: index + 1
+                    }));
+                    set(updatedItems);
                 }
             }
         },
@@ -68,7 +87,7 @@ function createSearchHistory() {
             set([]);
             if (typeof window !== 'undefined') {
                 localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem(URL_HASH_MAP_KEY); // URL 해시맵도 함께 제거
+                localStorage.removeItem(URL_HASH_MAP_KEY);
             }
         }
     };

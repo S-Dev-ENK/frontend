@@ -4,6 +4,8 @@
     import { searchHistory } from '$lib/stores/searchHistory';
     import api from '$lib/api';
     import { onMount } from 'svelte';
+    import { urlValidation } from '$lib/utils/urlValidation';
+    
    
     let url = '';
     let isAnalyzing = false;
@@ -17,53 +19,52 @@
         return hashHex;
     }
 
-    async function handleSubmit() {
+// 메인 페이지의 handleSubmit 함수 수정
+async function handleSubmit() {
     if (url && !isAnalyzing) {
         isAnalyzing = true;
         error = null;
         
         try {
-            // API 호출 부분 주석 처리
-            /*const result = await api.analyzeUrl(url);
-            const urlHash = await sha256(url);
+            const validation = urlValidation.isValidUrl(url);
+            if (!validation.isValid) {
+                throw new Error(validation.error);
+            }
+
+            const validatedUrl = validation.url;
+            const result = await api.analyzeUrl(validatedUrl);
             
-            // searchHistory 스토어에 새로운 분석 결과 추가
-            searchHistory.addSearch({
-                url: url,
-                title: result.title || '',
-                status: result.status || 'Online',
-                resourceCount: result.resourceCount || 0,
-                linkCount: result.linkCount || 0,
-                tags: result.tags || ['normal'],
-                country: result.country || ''
-            });*/
+            if (result.isSuccess) {
+                const urlHash = await sha256(validatedUrl);
+                
+                searchHistory.addSearch({
+                    url: validatedUrl,
+                    urlHash: urlHash,
+                    title: 'Analyzing...',
+                    status: 'Online',
+                    resourceCount: 0,
+                    linkCount: 0,
+                    tags: ['normal'],
+                    country: 'Analyzing...'
+                });
 
-            // 임시로 더미 데이터 추가
-            const urlHash = await sha256(url);
-            searchHistory.addSearch({
-                url: url,
-                urlHash: urlHash, // URL 해시 추가
-                title: 'Test Title',
-                status: 'Online',
-                resourceCount: 100,
-                linkCount: 50,
-                tags: ['normal'],
-                country: 'South Korea'
-            });
+                const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
+                urlMap[urlHash] = validatedUrl;
+                localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
 
-            const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
-            urlMap[urlHash] = url;
-            localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
-
-            goto(`/results?hash=${urlHash}`);
+                goto(`/results?hash=${urlHash}&uuid=${result.urlUuid}`);
+            } else {
+                throw new Error('분석에 실패했습니다.');
+            }
         } catch (err) {
-            // 에러가 발생해도 results 페이지로 이동
+            error = err.message;
             console.error('URL 분석 중 오류 발생:', err);
         } finally {
             isAnalyzing = false;
         }
     }
 }
+
 
     function getStatusClass(status) {
         return status === 'Online' ? 'bg-green-500' : 'bg-gray-500';
@@ -136,30 +137,38 @@
         <div class="search-section px-4">
             <div class="max-w-6xl mx-auto">
                 <form on:submit|preventDefault={handleSubmit} class="relative" in:fade>
-                    <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-12 sm:h-16">
-                        <input
-                            bind:value={url}
-                            type="text"
-                            class="flex-1 pl-4 sm:pl-6 pr-12 py-2 sm:py-4 text-sm sm:text-base text-gray-700 focus:outline-none rounded-full"
-                            placeholder="Domain, URL을 입력하세요"
-                        />
-                        <button
-                            type="submit"
-                            class="search-button"
-                            disabled={isAnalyzing}
-                        >
-                            {#if isAnalyzing}
-                                <div class="loader"></div>
-                            {:else}
-                                <div class="w-8 h-8 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center">
-                                    <img 
-                                        src="/images/search.png" 
-                                        alt="search" 
-                                        class="w-5 h-5 sm:w-8 sm:h-8"
-                                    />
-                                </div>
-                            {/if}
-                        </button>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-12 sm:h-16">
+                            <input
+                                bind:value={url}
+                                type="text"
+                                class="flex-1 pl-4 sm:pl-6 pr-12 py-2 sm:py-4 text-sm sm:text-base text-gray-700 focus:outline-none rounded-full 
+                                    {error ? 'border-red-500 focus:border-red-500' : ''}"
+                                placeholder="Domain, URL을 입력하세요"
+                            />
+                            <button
+                                type="submit"
+                                class="search-button"
+                                disabled={isAnalyzing}
+                            >
+                                {#if isAnalyzing}
+                                    <div class="loader"></div>
+                                {:else}
+                                    <div class="w-8 h-8 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center">
+                                        <img 
+                                            src="/images/search.png" 
+                                            alt="search" 
+                                            class="w-5 h-5 sm:w-8 sm:h-8"
+                                        />
+                                    </div>
+                                {/if}
+                            </button>
+                        </div>
+                        {#if error}
+                            <div class="text-red-500 text-sm px-4" transition:fade>
+                                {error}
+                            </div>
+                        {/if}
                     </div>
                 </form>
             </div>

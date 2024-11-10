@@ -8,6 +8,7 @@
     import { fade } from 'svelte/transition';
     import AIReport from '$lib/components/AIReport.svelte';
     import api from '$lib/api';
+    import { urlValidation } from '$lib/utils/urlValidation';
 
     ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
@@ -184,44 +185,52 @@
     }
 
     // 검색 처리 함수
+    // 결과 페이지의 handleSearch 함수 수정
     async function handleSearch() {
-        if (searchUrl && !isAnalyzing) {
-            isAnalyzing = true;
-            error = null;
+    if (searchUrl && !isAnalyzing) {
+        isAnalyzing = true;
+        error = null;
+        
+        try {
+            const validation = urlValidation.isValidUrl(searchUrl);
+            if (!validation.isValid) {
+                throw new Error(validation.error);
+            }
+
+            const validatedUrl = validation.url;
+            const result = await api.analyzeUrl(validatedUrl);
             
-            try {
-                const urlHash = await sha256(searchUrl);
+            if (result.isSuccess) {
+                const urlHash = await sha256(validatedUrl);
                 
-                // 검색 기록 저장
                 searchHistory.addSearch({
-                    url: searchUrl,
-                    urlHash: urlHash, // URL 해시 추가
-                    title: 'Test Title',
+                    url: validatedUrl,
+                    urlHash: urlHash,
+                    title: 'Analyzing...',
                     status: 'Online',
-                    resourceCount: 100,
-                    linkCount: 50,
+                    resourceCount: 0,
+                    linkCount: 0,
                     tags: ['normal'],
-                    country: 'South Korea'
+                    country: 'Analyzing...'
                 });
 
-                // URL 맵 업데이트
                 const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
-                urlMap[urlHash] = searchUrl;
+                urlMap[urlHash] = validatedUrl;
                 localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
 
-                // 새 URL로 이동
-                goto(`/results?hash=${urlHash}`);
-                
-                // 검색창 초기화
+                goto(`/results?hash=${urlHash}&uuid=${result.urlUuid}`);
                 searchUrl = '';
-            } catch (err) {
-                console.error('URL 분석 중 오류 발생:', err);
-                error = 'URL 분석 중 오류가 발생했습니다.';
-            } finally {
-                isAnalyzing = false;
+            } else {
+                throw new Error('분석에 실패했습니다.');
             }
+        } catch (err) {
+            error = err.message;
+            console.error('URL 분석 중 오류 발생:', err);
+        } finally {
+            isAnalyzing = false;
         }
     }
+}
 
     function getStatusColor(status) {
         switch(status.toLowerCase()) {
@@ -249,30 +258,38 @@
     <div class="bg-gradient-overlay relative h-[12vh] sm:h-[15vh] flex items-center">
         <div class="max-w-6xl mx-auto w-full px-4">
             <form on:submit|preventDefault={handleSearch} class="relative" in:fade>
-                <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-12 sm:h-16">
-                    <input
-                        bind:value={searchUrl}
-                        type="text"
-                        class="flex-1 pl-4 sm:pl-6 pr-12 py-2 sm:py-4 text-sm sm:text-base text-gray-700 focus:outline-none rounded-full"
-                        placeholder="Domain, URL을 입력하세요"
-                    />
-                    <button
-                        type="submit"
-                        class="search-button"
-                        disabled={isAnalyzing}
-                    >
-                        {#if isAnalyzing}
-                            <div class="loader"></div>
-                        {:else}
-                            <div class="w-8 h-8 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                                <img 
-                                    src="/images/search.png" 
-                                    alt="search" 
-                                    class="w-5 h-5 sm:w-8 sm:h-8"
-                                />
-                            </div>
-                        {/if}
-                    </button>
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center bg-white rounded-full shadow-xl relative pr-2 h-12 sm:h-16">
+                        <input
+                            bind:value={searchUrl}
+                            type="text"
+                            class="flex-1 pl-4 sm:pl-6 pr-12 py-2 sm:py-4 text-sm sm:text-base text-gray-700 focus:outline-none rounded-full
+                                {error ? 'border-red-500 focus:border-red-500' : ''}"
+                            placeholder="Domain, URL을 입력하세요"
+                        />
+                        <button
+                            type="submit"
+                            class="search-button"
+                            disabled={isAnalyzing}
+                        >
+                            {#if isAnalyzing}
+                                <div class="loader"></div>
+                            {:else}
+                                <div class="w-8 h-8 sm:w-12 sm:h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <img 
+                                        src="/images/search.png" 
+                                        alt="search" 
+                                        class="w-5 h-5 sm:w-8 sm:h-8"
+                                    />
+                                </div>
+                            {/if}
+                        </button>
+                    </div>
+                    {#if error}
+                        <div class="text-red-500 text-sm px-4" transition:fade>
+                            {error}
+                        </div>
+                    {/if}
                 </div>
             </form>
         </div>
@@ -638,7 +655,11 @@
         border: none;
         background: none;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: transform 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
     }
 
     .search-button:hover {
@@ -711,7 +732,19 @@
 
     @media (max-width: 640px) {
         .search-button {
-            transform: scale(0.8);
+            right: 4px; /* 모바일에서 오른쪽 여백 줄임 */
+        }
+        
+        .search-button div {
+            transform: scale(0.8); /* 모바일에서 버튼 크기 조정 */
+            transform-origin: center;
+        }
+        
+        /* loader 크기도 조정 */
+        .loader {
+            width: 14px;
+            height: 14px;
         }
     }
+
 </style>
