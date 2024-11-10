@@ -1,5 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import fs from 'fs';
+import path from 'path';
 
 export default defineConfig({
     plugins: [sveltekit()],
@@ -8,17 +10,14 @@ export default defineConfig({
         host: true,
         proxy: {
             '/apis': {
-                target: 'https://enk-api.com',
+                target: 'https://enk-api.com:8000',
                 changeOrigin: true,
                 rewrite: (path) => path,
                 secure: false,
             }
         }
     },
-    ssr: {
-        noExternal: ['chart.js', '@sveltejs/kit/**']
-    },
     optimizeDeps: {
-        include: ['d3', 'topojson-client', 'jspdf', 'papaparse']
+        include: ['d3', 'topojson-client']
     }
 });
