@@ -208,31 +208,7 @@
             throw error;
         }
     }
-
-    // 결과를 주기적으로 확인하는 함수 추가
-    async function pollResults(uuid, maxAttempts = 30) {
-        for (let i = 0; i < maxAttempts; i++) {
-            try {
-                const response = await fetch(`http://${import.meta.env.VITE_PUBLIC_IP}:${import.meta.env.VITE_BACKEND_PORT}/apis/malicious-domain/details/?url_uuid=${uuid}`);
-                
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        // 아직 결과가 준비되지 않음
-                        await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기
-                        continue;
-                    }
-                    throw new Error('API 요청 실패');
-                }
-                
-                return await response.json();
-            } catch (error) {
-                if (i === maxAttempts - 1) throw error;
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-        }
-        throw new Error('시간 초과: 결과를 받지 못했습니다');
-    }
-
+    
     // 검색 처리 함수
     async function handleSearch() {
         if (searchUrl && !isAnalyzing) {
