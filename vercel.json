@@ -2,11 +2,11 @@
     "rewrites": [
       {
         "source": "/apis/malicious-domain",
-        "destination": "https://enk-api.com/apis/malicious-domain"
+        "destination": "http://enk-api.com/apis/malicious-domain"
       },
       {
         "source": "/apis/malicious-domain/:path*",
-        "destination": "https://enk-api.com/apis/malicious-domain/:path*"
+        "destination": "http://enk-api.com/apis/malicious-domain/:path*"
       }
     ]
   }
