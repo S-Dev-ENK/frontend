@@ -1,37 +1,37 @@
 // src/lib/api.js
 const API_BASE_URL = import.meta.env.PROD 
-   ? 'http://enk-api.com/apis'  // https -> http로 변경
-   : '/apis';
+    ? '/apis'  // 직접적인 도메인 참조 대신 상대 경로 사용
+    : '/apis';
 
 async function fetchWithErrorHandling(url, options = {}) {
-   try {
-       const response = await fetch(url, {
-           ...options,
-           headers: {
-               'Content-Type': 'application/json',
-               'Accept': 'application/json',
-           },
-           credentials: 'omit',
-           mode: 'cors'
-       });
-       
-       if (!response.ok) {
-           let errorMessage;
-           try {
-               const errorData = await response.json();
-               errorMessage = errorData.message || '알 수 없는 오류가 발생했습니다.';
-           } catch {
-               errorMessage = await response.text();
-           }
-           throw new Error(`HTTP 오류! 상태: ${response.status}, 메시지: ${errorMessage}`);
-       }
-       
-       return await response.json();
-   } catch (error) {
-       console.error('API 요청 실패:', error);
-       throw error;
-   }
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            credentials: 'omit',  // CORS 설정
+        });
+        
+        if (!response.ok) {
+            let errorMessage;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || '알 수 없는 오류가 발생했습니다.';
+            } catch {
+                errorMessage = await response.text();
+            }
+            throw new Error(`HTTP 오류! 상태: ${response.status}, 메시지: ${errorMessage}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('API 요청 실패:', error);
+        throw error;
+    }
 }
+
 
 export const api = {
    analyzeUrl: async (requestedUrl) => {
