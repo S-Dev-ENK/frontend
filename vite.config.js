@@ -10,7 +10,7 @@ export default defineConfig({
         host: true,
         proxy: {
             '/apis': {
-                target: 'https://enk-api.com',
+                target: 'http://${process.env.VITE_PUBLIC_IP}:8000',
                 changeOrigin: true,
                 rewrite: (path) => path,
                 secure: false,

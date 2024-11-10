@@ -160,27 +160,77 @@
         }
     }
 
-    // API 호출 함수 추가
+    // // API 호출 함수 추가
+    // async function fetchDomainInfo(url) {
+    //     try {
+    //         const response = await fetch('/api/analyze', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify({
+    //                 url,
+    //                 prompt: `Please provide WHOIS information for ${url} including: registrar, registration date, expiration date, nameservers, registrant information, and SSL certificate details if available. Format the response as JSON.`
+    //             })
+    //         });
+            
+    //         if (!response.ok) throw new Error('API 요청 실패');
+            
+    //         return await response.json();
+    //     } catch (error) {
+    //         console.error('도메인 정보 조회 실패:', error);
+    //         throw error;
+    //     }
+    // }
+    
     async function fetchDomainInfo(url) {
         try {
-            const response = await fetch('/api/analyze', {
+            const response = await fetch(`/apis/malicious-domain/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    url,
-                    prompt: `Please provide WHOIS information for ${url} including: registrar, registration date, expiration date, nameservers, registrant information, and SSL certificate details if available. Format the response as JSON.`
+                    requested_url: url
                 })
             });
             
             if (!response.ok) throw new Error('API 요청 실패');
             
-            return await response.json();
+            const data = await response.json();
+            if (data.url_uuid) {
+                return await pollResults(data.url_uuid);
+            }
+            
+            throw new Error('UUID를 받지 못했습니다');
         } catch (error) {
-            console.error('도메인 정보 조회 실패:', error);
+            console.error('도메인 분석 요청 실패:', error);
             throw error;
         }
+    }
+
+    // 결과를 주기적으로 확인하는 함수 추가
+    async function pollResults(uuid, maxAttempts = 30) {
+        for (let i = 0; i < maxAttempts; i++) {
+            try {
+                const response = await fetch(`http://${import.meta.env.VITE_PUBLIC_IP}:${import.meta.env.VITE_BACKEND_PORT}/apis/malicious-domain/details/?url_uuid=${uuid}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // 아직 결과가 준비되지 않음
+                        await new Promise(resolve => setTimeout(resolve, 2000)); // 2초 대기
+                        continue;
+                    }
+                    throw new Error('API 요청 실패');
+                }
+                
+                return await response.json();
+            } catch (error) {
+                if (i === maxAttempts - 1) throw error;
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+        throw new Error('시간 초과: 결과를 받지 못했습니다');
     }
 
     // 검색 처리 함수
