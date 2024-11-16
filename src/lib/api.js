@@ -18,7 +18,7 @@ async function fetchWithErrorHandling(url, options = {}) {
             let errorMessage;
             try {
                 const errorData = await response.json();
-                errorMessage = errorData.message || '알 수 없는 오류가 발생했습니다.';
+                errorMessage = errorData.message || errorData.detail || '알 수 없는 오류가 발생했습니다.';
             } catch {
                 errorMessage = await response.text();
             }
@@ -34,17 +34,21 @@ async function fetchWithErrorHandling(url, options = {}) {
 
 export const api = {
     analyzeUrl: async (requestedUrl) => {
+        // API 문서에 맞게 요청 본문 수정
         const requestBody = {
             requested_url: requestedUrl,
-            redirect_urls: {},  // 빈 객체로 수정
-            body: {}           // 빈 객체로 유지
+            // redirect_urls와 body 필드 제거
         };
 
         try {
+            console.log('Sending request:', requestBody); // 요청 데이터 로깅
+
             const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/`, {
                 method: 'POST',
                 body: JSON.stringify(requestBody),
             });
+            
+            console.log('Received response:', response); // 응답 데이터 로깅
             
             return {
                 isSuccess: true,
@@ -55,7 +59,7 @@ export const api = {
             console.error('URL 분석 실패:', error);
             return {
                 isSuccess: false,
-                statusCode: error.status || 500,
+                statusCode: error.status || 422,
                 error: error.message
             };
         }
