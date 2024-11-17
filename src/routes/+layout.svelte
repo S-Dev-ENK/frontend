@@ -55,13 +55,25 @@
     }
 
     function getTagClass(tag) {
-        switch (tag) {
-            case 'phishing': return 'bg-red-500';
-            case 'malware': return 'bg-orange-400';
-            case 'fraud': return 'bg-orange-500';
-            case 'normal': return 'bg-green-400';
-            case 'portal': return 'bg-blue-400';
-            default: return 'bg-gray-400';
+        switch (tag.toLowerCase()) {
+            case 'analyzing':
+                return 'bg-yellow-400';  // 분석 중 - 노란색
+            case 'normal':
+                return 'bg-green-400';   // 정상 - 초록색
+            case 'error':
+                return 'bg-red-500';     // 에러 - 빨간색
+            case 'complete':
+                return 'bg-blue-400';    // 완료 - 파란색
+            case 'phishing':
+                return 'bg-red-500';     // 피싱 - 빨간색
+            case 'malware':
+                return 'bg-orange-400';  // 멀웨어 - 주황색
+            case 'fraud':
+                return 'bg-orange-500';  // 사기 - 진한 주황색
+            case 'portal':
+                return 'bg-blue-400';    // 포털 - 파란색
+            default:
+                return 'bg-gray-400';    // 기타 - 회색
         }
     }
 </script>

@@ -3,6 +3,7 @@
     import { goto } from '$app/navigation';
     import { searchHistory } from '$lib/stores/searchHistory';
     import { analysisStore } from '$lib/stores/analysisStore';
+    import { AnalysisStatus, AnalysisDetails } from '$lib/types/analysisTypes';
     import api from '$lib/api';
     import { onMount } from 'svelte';
     import { urlValidation } from '$lib/utils/urlValidation';
@@ -21,48 +22,54 @@
     }
 
     // 메인 페이지의 handleSubmit 함수 수정
-        async function handleSubmit() {
-        if (url && !$analysisStore.isAnalyzing) {
+    async function handleSubmit() {
+        if (url && !isAnalyzing) {
+            isAnalyzing = true;
+            error = null;
+            const urlHash = await sha256(url);
+            
             try {
-                console.log('메인 페이지 URL 입력:', url);
-                
                 const validation = urlValidation.isValidUrl(url);
                 if (!validation.isValid) {
                     throw new Error(validation.error);
                 }
 
                 const validatedUrl = validation.url;
-                const urlHash = await sha256(validatedUrl);
-
-                console.log('URL 검증 완료:', validatedUrl);
-
-                // 검색 기록 저장
+                
+                // 초기 상태로 검색 기록 추가
                 searchHistory.addSearch({
                     url: validatedUrl,
                     urlHash: urlHash,
-                    title: '분석 중...',
-                    status: 'Processing',
-                    resourceCount: 0,
-                    linkCount: 0,
-                    tags: ['analyzing'],
-                    country: '-'
+                    status: AnalysisStatus.PROCESSING
                 });
+
+                // AI Report 분석 시작 (병렬 처리)
+                aiReportStore.startAnalysis(urlHash);
+                generateAIReport({ url: validatedUrl, urlHash })
+                    .then(report => {
+                        aiReportStore.setReport(urlHash, report);
+                    })
+                    .catch(err => {
+                        aiReportStore.setError(urlHash, err.message);
+                        console.error('AI Report 생성 중 오류:', err);
+                    });
+            
 
                 // URL 맵 업데이트
                 const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
                 urlMap[urlHash] = validatedUrl;
                 localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
 
-                // 분석 시작
-                analysisStore.startAnalysis(validatedUrl);
-                
                 // API 호출
-                console.log('API 호출 시작');
-                // const result = await api.analyzeUrl(validatedUrl);
+                const result = await api.analyzeUrl(validatedUrl);
+                
+                // 성공적인 응답을 받으면 상태 업데이트
+                searchHistory.updateSearchStatus(urlHash, AnalysisStatus.COMPLETE, result);
                 
                 goto(`/results?hash=${urlHash}`);
-
             } catch (err) {
+                // 에러 발생 시 상태 업데이트
+                searchHistory.updateSearchStatus(urlHash, AnalysisStatus.ERROR);
                 error = err.message;
                 console.error('URL 분석 중 오류 발생:', err);
                 analysisStore.setError(err.message);
@@ -77,13 +84,25 @@
     }
 
     function getTagClass(tag) {
-        switch (tag) {
-            case 'phishing': return 'bg-red-500';
-            case 'malware': return 'bg-orange-400';
-            case 'fraud': return 'bg-orange-500';
-            case 'normal': return 'bg-green-400';
-            case 'portal': return 'bg-blue-400';
-            default: return 'bg-gray-400';
+            switch (tag.toLowerCase()) {
+            case 'analyzing':
+                return 'bg-yellow-400';  // 분석 중 - 노란색
+            case 'normal':
+                return 'bg-green-400';   // 정상 - 초록색
+            case 'error':
+                return 'bg-red-500';     // 에러 - 빨간색
+            case 'complete':
+                return 'bg-blue-400';    // 완료 - 파란색
+            case 'phishing':
+                return 'bg-red-500';     // 피싱 - 빨간색
+            case 'malware':
+                return 'bg-orange-400';  // 멀웨어 - 주황색
+            case 'fraud':
+                return 'bg-orange-500';  // 사기 - 진한 주황색
+            case 'portal':
+                return 'bg-blue-400';    // 포털 - 파란색
+            default:
+                return 'bg-gray-400';    // 기타 - 회색
         }
     }
 

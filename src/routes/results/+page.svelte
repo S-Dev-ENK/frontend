@@ -5,7 +5,9 @@
     import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
     import { goto } from '$app/navigation';
     import { searchHistory } from '$lib/stores/searchHistory';
+    import { AnalysisStatus } from '$lib/types/analysisTypes';
     import { analysisStore } from '$lib/stores/analysisStore';
+    import { aiReportStore } from '$lib/stores/aiReportStore';
     import { fade } from 'svelte/transition';
     import AIReport from '$lib/components/AIReport.svelte';
     import api from '$lib/api';
@@ -43,6 +45,7 @@
             }
 
             displayUrl = targetUrl;
+            searchHistory.updateSearchStatus(urlHash, AnalysisStatus.PROCESSING);
             
             // API 응답 대기 및 처리
             try {
@@ -51,6 +54,7 @@
                 
                 if (result.isSuccess) {
                     console.log('API 응답 성공:', result);
+                    searchHistory.updateSearchStatus(urlHash, AnalysisStatus.COMPLETE, result);
                     // 결과 데이터 설정
                     results = {
                         isSuccess: true,
@@ -145,6 +149,7 @@
             } catch (err) {
             // API 호출 자체가 실패하거나 응답이 실패한 경우
             console.error('API 응답 처리 실패:', err);
+            searchHistory.updateSearchStatus(urlHash, AnalysisStatus.ERROR);
             error = err.message;
             // 분석 상태 종료 및 에러 상태 설정
             analysisStore.setError(err.message);
@@ -288,6 +293,8 @@
         }
     }
 
+
+
     // onMount와 URL 매개변수 변경 감지는 그대로 유지
     onMount(async () => {
         const urlHash = $page.url.searchParams.get('hash');
@@ -301,13 +308,13 @@
     });
 
     // URL 매개변수 변경 감지
-    $: {
-        const urlHash = $page.url.searchParams.get('hash');
-        if (urlHash) {
-            console.log('URL 해시 변경 감지:', urlHash);
-            loadResultsByHash(urlHash);
-        }
-    }
+    // $: {
+    //     const urlHash = $page.url.searchParams.get('hash');
+    //     if (urlHash) {
+    //         console.log('URL 해시 변경 감지:', urlHash);
+    //         loadResultsByHash(urlHash);
+    //     }
+    // }
 
     // 새로운 URL 검색 처리
         async function handleSearch() {
@@ -363,6 +370,11 @@
             default:
                 return 'border-gray-500 text-gray-500';
         }
+    }
+
+    function handleTabChange(tab) {
+        // AI Report 탭은 독립적으로 동작하므로 별도 처리 없이 탭만 변경
+        activeTab = tab;
     }
 
     // 상태 변수 (예시)
@@ -439,7 +451,9 @@
 
     <!-- 분석 결과 콘텐츠 -->
     <div class="max-w-7xl mx-auto px-4 py-4 sm:py-6">
-        {#if $analysisStore.isAnalyzing}
+        {#if activeTab === 'AI Report'}
+            <AIReport />
+        {:else if $analysisStore.isAnalyzing}
             <!-- 로딩 상태 UI -->
             <div class="min-h-[60vh] flex items-center justify-center">
                 <div class="text-center">
@@ -557,100 +571,100 @@
                         </div>
                     </div>
 
-                    <!-- 보안벤더 분석 섹션을 대체할 도메인 정보 섹션 -->
-            <div class="lg:col-span-12 bg-white rounded-lg shadow p-4 sm:p-6">
-                <h2 class="flex items-center gap-2 text-base sm:text-lg font-medium text-gray-900 mb-4">
-                    <img src="/images/domain-info.png" alt="도메인 정보" class="w-6 h-6 sm:w-8 sm:h-8" />
-                    도메인 기본 정보
-                </h2>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- 도메인 등록 정보 -->
-                    <div class="space-y-4">
-                        <h3 class="text-sm sm:text-base font-medium text-gray-700">등록 정보</h3>
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-                            <div class="grid grid-cols-3 gap-2 text-sm">
-                                <span class="text-gray-600">등록기관:</span>
-                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrar.name}</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2 text-sm">
-                                <span class="text-gray-600">등록일:</span>
-                                <span class="col-span-2 text-gray-900">{new Date(results.domainInfo.dates.creation).toLocaleDateString()}</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2 text-sm">
-                                <span class="text-gray-600">만료일:</span>
-                                <span class="col-span-2 text-gray-900">{new Date(results.domainInfo.dates.expiration).toLocaleDateString()}</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2 text-sm">
-                                <span class="text-gray-600">네임서버:</span>
-                                <div class="col-span-2 space-y-1">
-                                    {#each results.domainInfo.nameservers as ns}
-                                        <span class="block text-gray-900">{ns}</span>
-                                    {/each}
+                        <!-- 보안벤더 분석 섹션을 대체할 도메인 정보 섹션 -->
+                <div class="lg:col-span-12 bg-white rounded-lg shadow p-4 sm:p-6">
+                    <h2 class="flex items-center gap-2 text-base sm:text-lg font-medium text-gray-900 mb-4">
+                        <img src="/images/domain-info.png" alt="도메인 정보" class="w-6 h-6 sm:w-8 sm:h-8" />
+                        도메인 기본 정보
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- 도메인 등록 정보 -->
+                        <div class="space-y-4">
+                            <h3 class="text-sm sm:text-base font-medium text-gray-700">등록 정보</h3>
+                            <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <span class="text-gray-600">등록기관:</span>
+                                    <span class="col-span-2 text-gray-900">{results.domainInfo.registrar.name}</span>
                                 </div>
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <span class="text-gray-600">등록일:</span>
+                                    <span class="col-span-2 text-gray-900">{new Date(results.domainInfo.dates.creation).toLocaleDateString()}</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <span class="text-gray-600">만료일:</span>
+                                    <span class="col-span-2 text-gray-900">{new Date(results.domainInfo.dates.expiration).toLocaleDateString()}</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <span class="text-gray-600">네임서버:</span>
+                                    <div class="col-span-2 space-y-1">
+                                        {#each results.domainInfo.nameservers as ns}
+                                            <span class="block text-gray-900">{ns}</span>
+                                        {/each}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 등록자 정보 -->
+                        <div class="space-y-4">
+                            <h3 class="text-sm sm:text-base font-medium text-gray-700">등록자 정보</h3>
+                            <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <span class="text-gray-600">조직명:</span>
+                                    <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.organization}</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <span class="text-gray-600">국가:</span>
+                                    <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.country}</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <span class="text-gray-600">지역:</span>
+                                    <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.state}</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                    <span class="text-gray-600">이메일:</span>
+                                    <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.email}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SSL 인증서 정보 -->
+                        <div class="lg:col-span-2 space-y-4">
+                            <h3 class="text-sm sm:text-base font-medium text-gray-700">SSL 인증서 정보</h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                {#if results.domainInfo.certificate.exists}
+                                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                                        <div>
+                                            <span class="block text-gray-600 mb-1">발급기관</span>
+                                            <span class="text-gray-900">{results.domainInfo.certificate.issuer}</span>
+                                        </div>
+                                        <div>
+                                            <span class="block text-gray-600 mb-1">발급대상</span>
+                                            <span class="text-gray-900">{results.domainInfo.certificate.subject}</span>
+                                        </div>
+                                        <div>
+                                            <span class="block text-gray-600 mb-1">유효기간</span>
+                                            <span class="text-gray-900">
+                                                {new Date(results.domainInfo.certificate.validFrom).toLocaleDateString()} ~ 
+                                                {new Date(results.domainInfo.certificate.validTo).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span class="block text-gray-600 mb-1">암호화 알고리즘</span>
+                                            <span class="text-gray-900">{results.domainInfo.certificate.algorithm}</span>
+                                        </div>
+                                    </div>
+                                {:else}
+                                    <div class="text-center text-gray-500 py-2">
+                                        인증서 정보 없음
+                                    </div>
+                                {/if}
                             </div>
                         </div>
                     </div>
-
-                    <!-- 등록자 정보 -->
-                    <div class="space-y-4">
-                        <h3 class="text-sm sm:text-base font-medium text-gray-700">등록자 정보</h3>
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-                            <div class="grid grid-cols-3 gap-2 text-sm">
-                                <span class="text-gray-600">조직명:</span>
-                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.organization}</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2 text-sm">
-                                <span class="text-gray-600">국가:</span>
-                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.country}</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2 text-sm">
-                                <span class="text-gray-600">지역:</span>
-                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.state}</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2 text-sm">
-                                <span class="text-gray-600">이메일:</span>
-                                <span class="col-span-2 text-gray-900">{results.domainInfo.registrant.email}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SSL 인증서 정보 -->
-                    <div class="lg:col-span-2 space-y-4">
-                        <h3 class="text-sm sm:text-base font-medium text-gray-700">SSL 인증서 정보</h3>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            {#if results.domainInfo.certificate.exists}
-                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                                    <div>
-                                        <span class="block text-gray-600 mb-1">발급기관</span>
-                                        <span class="text-gray-900">{results.domainInfo.certificate.issuer}</span>
-                                    </div>
-                                    <div>
-                                        <span class="block text-gray-600 mb-1">발급대상</span>
-                                        <span class="text-gray-900">{results.domainInfo.certificate.subject}</span>
-                                    </div>
-                                    <div>
-                                        <span class="block text-gray-600 mb-1">유효기간</span>
-                                        <span class="text-gray-900">
-                                            {new Date(results.domainInfo.certificate.validFrom).toLocaleDateString()} ~ 
-                                            {new Date(results.domainInfo.certificate.validTo).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span class="block text-gray-600 mb-1">암호화 알고리즘</span>
-                                        <span class="text-gray-900">{results.domainInfo.certificate.algorithm}</span>
-                                    </div>
-                                </div>
-                            {:else}
-                                <div class="text-center text-gray-500 py-2">
-                                    인증서 정보 없음
-                                </div>
-                            {/if}
-                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
             
             {:else if activeTab === 'Resources'}
                 <div class="bg-white rounded-lg shadow p-6">
@@ -705,10 +719,11 @@
                         </table>
                     </div>
                 </div>
-            {:else if activeTab === 'AI Report'}
-                 <AIReport />
+                <!-- {:else if activeTab === 'AI Report'}
+                    <AIReport />
+                {/if}
+                -->
             {/if}
-            
         {/if}
     </div>
 </div>
