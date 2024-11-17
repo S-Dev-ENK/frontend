@@ -3,7 +3,9 @@
     import { goto } from '$app/navigation';
     import { searchHistory } from '$lib/stores/searchHistory';
     import { analysisStore } from '$lib/stores/analysisStore';
-    import { AnalysisStatus, AnalysisDetails } from '$lib/types/analysisTypes';
+    import { AnalysisStatus } from '$lib/types/analysisTypes';
+    import { aiReportStore } from '$lib/stores/aiReportStore';  // 추가
+    import { generateAIReport } from '$lib/services/gptService';  // 추가
     import api from '$lib/api';
     import { onMount } from 'svelte';
     import { urlValidation } from '$lib/utils/urlValidation';

@@ -25,7 +25,7 @@ typosqutting도 고려해서 분석해주세요.(작은 오타도 고려해달�
     "riskAnalysis": {
         "score": number, // 0-100 사이의 위험도 점수
         "level": string, // "낮음", "중간", "높음" 중 하나
-        "description": string // 위험도 설명
+        "description": string // 반드시 입력받은 URL을 표시한 후 위험도 설명
     },
     "detailedAnalysis": {
         "keyFindings": string[], // 주요 발견사항 목록
