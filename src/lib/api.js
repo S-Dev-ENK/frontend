@@ -34,27 +34,34 @@ async function fetchWithErrorHandling(url, options = {}) {
 
 export const api = {
     analyzeUrl: async (requestedUrl) => {
-        // API 문서에 맞게 요청 본문 수정
-        const requestBody = {
-            requested_url: requestedUrl,
-            // redirect_urls와 body 필드 제거
-        };
-
         try {
-            console.log('Sending request:', requestBody); // 요청 데이터 로깅
+            // URL에 프로토콜 추가
+            let processedUrl = requestedUrl;
+            if (!processedUrl.startsWith('http://') && !processedUrl.startsWith('https://')) {
+                processedUrl = `${requestedUrl}`;
+            }
 
-            const response = await fetchWithErrorHandling(`${API_BASE_URL}/malicious-domain/`, {
-                method: 'POST',
-                body: JSON.stringify(requestBody),
+            // URL을 query parameter로 전송
+            const encodedUrl = encodeURIComponent(processedUrl);
+            const queryUrl = `${API_BASE_URL}/malicious-domain/?url=${encodedUrl}`;
+
+            console.log('Sending request to:', queryUrl);
+
+            const response = await fetchWithErrorHandling(queryUrl, {
+                method: 'POST'  // POST 메소드는 유지
             });
             
-            console.log('Received response:', response); // 응답 데이터 로깅
-            
-            return {
-                isSuccess: true,
-                statusCode: response.status || 200,
-                urlUuid: response.url_uuid || ''
-            };
+            console.log('Received response:', response);
+
+            if (response && response.url_uuid) {
+                return {
+                    isSuccess: true,
+                    statusCode: 200,
+                    urlUuid: response.url_uuid
+                };
+            } else {
+                throw new Error('잘못된 응답 형식입니다.');
+            }
         } catch (error) {
             console.error('URL 분석 실패:', error);
             return {
@@ -64,6 +71,8 @@ export const api = {
             };
         }
     },
+
+
 
     getDomainDetails: async (urlUuid) => {
         try {

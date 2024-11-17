@@ -5,6 +5,7 @@
     import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
     import { goto } from '$app/navigation';
     import { searchHistory } from '$lib/stores/searchHistory';
+    import { analysisStore } from '$lib/stores/analysisStore';
     import { fade } from 'svelte/transition';
     import AIReport from '$lib/components/AIReport.svelte';
     import api from '$lib/api';
@@ -13,7 +14,7 @@
     ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
     let searchUrl = ''; // URL 정보 표시용 변수와 검색용 변수를 분리
-    let displayUrl = ''; // 표시용 URL
+    let displayUrl = $page.url.searchParams.get('url') || '';
     let results = null;
     let isAnalyzing = false;
     let error = null;
@@ -30,26 +31,268 @@
         return hashHex;
     }
 
-        // URL 해시값으로부터 결과 로드
+    // loadResultsByHash 함수 수정
         async function loadResultsByHash(urlHash) {
         try {
+            console.log('결과 페이지 로드:', urlHash);
             const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
-            displayUrl = urlMap[urlHash];
+            const targetUrl = urlMap[urlHash];
 
-            if (!displayUrl) {
-                error = 'URL 정보를 찾을 수 없습니다.';
-                return;
+            if (!targetUrl) {
+                throw new Error('URL 정보를 찾을 수 없습니다.');
             }
 
-            await fetchResults(displayUrl);
+            displayUrl = targetUrl;
+            
+            // API 응답 대기 및 처리
+            try {
+                console.log('API 응답 대기 중...');
+                const result = await api.analyzeUrl(targetUrl);
+                
+                if (result.isSuccess) {
+                    console.log('API 응답 성공:', result);
+                    // 결과 데이터 설정
+                    results = {
+                        isSuccess: true,
+                        statusCode: result.statusCode,
+                        isMalicious: result.isMalicious,
+                        info1: result.info1,
+                        info2: result.info2,
+                        info3: result.info3,
+                        barChartData: {
+                            labels: ['위험도', '신뢰도', '악성코드', '피싱', '스팸', '평판'],
+                            datasets: [{
+                                label: '보안 분석 결과',
+                                data: [
+                                    result.riskScore || 0,
+                                    result.trustScore || 0,
+                                    result.malwareScore || 0,
+                                    result.phishingScore || 0,
+                                    result.spamScore || 0,
+                                    result.reputationScore || 0
+                                ],
+                                backgroundColor: [
+                                    'rgba(66, 153, 225, 0.5)',
+                                    'rgba(49, 130, 206, 0.5)',
+                                    'rgba(43, 108, 176, 0.5)',
+                                    'rgba(44, 82, 130, 0.5)',
+                                    'rgba(42, 67, 101, 0.5)',
+                                    'rgba(26, 32, 44, 0.5)'
+                                ],
+                                borderColor: [
+                                    'rgba(66, 153, 225, 1)',
+                                    'rgba(49, 130, 206, 1)',
+                                    'rgba(43, 108, 176, 1)',
+                                    'rgba(44, 82, 130, 1)',
+                                    'rgba(42, 67, 101, 1)',
+                                    'rgba(26, 32, 44, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        pieChartData: {
+                            labels: ['안전', '의심', '위험'],
+                            datasets: [{
+                                data: [
+                                    result.safeScore || 65,
+                                    result.suspiciousScore || 25,
+                                    result.dangerScore || 10
+                                ],
+                                backgroundColor: [
+                                    'rgba(72, 187, 120, 0.8)',
+                                    'rgba(246, 173, 85, 0.8)',
+                                    'rgba(245, 101, 101, 0.8)'
+                                ],
+                                hoverBackgroundColor: [
+                                    'rgba(72, 187, 120, 1)',
+                                    'rgba(246, 173, 85, 1)',
+                                    'rgba(245, 101, 101, 1)'
+                                ]
+                            }]
+                        },
+                        domainInfo: {
+                            registrar: {
+                                name: result.registrar?.name || "Unknown",
+                                url: result.registrar?.url || "#"
+                            },
+                            dates: {
+                                creation: result.dates?.creation || "Unknown",
+                                expiration: result.dates?.expiration || "Unknown"
+                            },
+                            nameservers: result.nameservers || [],
+                            registrant: {
+                                organization: result.registrant?.organization || "Unknown",
+                                country: result.registrant?.country || "Unknown",
+                                state: result.registrant?.state || "Unknown",
+                                email: result.registrant?.email || "Unknown"
+                            },
+                            certificate: {
+                                exists: result.certificate?.exists || false,
+                                issuer: result.certificate?.issuer || "Unknown",
+                                subject: result.certificate?.subject || "Unknown",
+                                validFrom: result.certificate?.validFrom || "Unknown",
+                                validTo: result.certificate?.validTo || "Unknown",
+                                algorithm: result.certificate?.algorithm || "Unknown"
+                            }
+                        }
+                    };
+                    // 활성 탭을 Summary로 설정
+                    activeTab = 'Summary';
+                    error = null;
+                    } else {
+                    throw new Error('분석에 실패했습니다.');
+                }
+            } catch (err) {
+            // API 호출 자체가 실패하거나 응답이 실패한 경우
+            console.error('API 응답 처리 실패:', err);
+            error = err.message;
+            // 분석 상태 종료 및 에러 상태 설정
+            analysisStore.setError(err.message);
+            analysisStore.finishAnalysis();
+            }
         } catch (err) {
-            console.error('URL 복원 오류:', err);
-            error = 'URL 정보 복원에 실패했습니다.';
+            // URL 정보를 찾지 못한 경우 등 기타 에러
+            console.error('결과 로드 에러:', err);
+            error = err.message;
+            analysisStore.setError(err.message);
+            analysisStore.finishAnalysis();
+        }  finally {
+            // 성공적으로 결과를 받았을 때만 분석 상태 종료
+            if (results) {
+                analysisStore.finishAnalysis();
+            }
         }
     }
 
+    // URL 분석 함수
+    async function analyzeUrl(targetUrl) {
+        try {
+            const result = await api.analyzeUrl(targetUrl);
+            
+            if (result.isSuccess) {
+                // 결과를 받아서 UI 업데이트
+                const urlHash = await sha256(targetUrl);
+                
+                // 검색 기록 업데이트
+                searchHistory.addSearch({
+                    url: targetUrl,
+                    urlHash: urlHash,
+                    title: result.title || targetUrl,  // API 응답에서 제목 받기
+                    status: 'Online',
+                    resourceCount: result.resourceCount || 0,
+                    linkCount: result.linkCount || 0,
+                    tags: result.tags || ['normal'],
+                    country: result.country || '-'
+                });
+
+                // 분석 결과 데이터 설정
+                results = {
+                    isSuccess: true,
+                    statusCode: result.statusCode,
+                    isMalicious: result.isMalicious,
+                    info1: result.info1,
+                    info2: result.info2,
+                    info3: result.info3,
+                    barChartData: {
+                        labels: ['위험도', '신뢰도', '악성코드', '피싱', '스팸', '평판'],
+                        datasets: [{
+                            label: '보안 분석 결과',
+                            data: [
+                                result.riskScore || 0,
+                                result.trustScore || 0,
+                                result.malwareScore || 0,
+                                result.phishingScore || 0,
+                                result.spamScore || 0,
+                                result.reputationScore || 0
+                            ],
+                            backgroundColor: [
+                                'rgba(66, 153, 225, 0.5)',
+                                'rgba(49, 130, 206, 0.5)',
+                                'rgba(43, 108, 176, 0.5)',
+                                'rgba(44, 82, 130, 0.5)',
+                                'rgba(42, 67, 101, 0.5)',
+                                'rgba(26, 32, 44, 0.5)'
+                            ],
+                            borderColor: [
+                                'rgba(66, 153, 225, 1)',
+                                'rgba(49, 130, 206, 1)',
+                                'rgba(43, 108, 176, 1)',
+                                'rgba(44, 82, 130, 1)',
+                                'rgba(42, 67, 101, 1)',
+                                'rgba(26, 32, 44, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    pieChartData: {
+                        labels: ['안전', '의심', '위험'],
+                        datasets: [{
+                            data: [
+                                result.safeScore || 65,
+                                result.suspiciousScore || 25,
+                                result.dangerScore || 10
+                            ],
+                            backgroundColor: [
+                                'rgba(72, 187, 120, 0.8)',
+                                'rgba(246, 173, 85, 0.8)',
+                                'rgba(245, 101, 101, 0.8)'
+                            ],
+                            hoverBackgroundColor: [
+                                'rgba(72, 187, 120, 1)',
+                                'rgba(246, 173, 85, 1)',
+                                'rgba(245, 101, 101, 1)'
+                            ]
+                        }]
+                    },
+                    domainInfo: {
+                        registrar: {
+                            name: result.registrar?.name || "Unknown",
+                            url: result.registrar?.url || "#"
+                        },
+                        dates: {
+                            creation: result.dates?.creation || "Unknown",
+                            expiration: result.dates?.expiration || "Unknown"
+                        },
+                        nameservers: result.nameservers || [],
+                        registrant: {
+                            organization: result.registrant?.organization || "Unknown",
+                            country: result.registrant?.country || "Unknown",
+                            state: result.registrant?.state || "Unknown",
+                            email: result.registrant?.email || "Unknown"
+                        },
+                        certificate: {
+                            exists: result.certificate?.exists || false,
+                            issuer: result.certificate?.issuer || "Unknown",
+                            subject: result.certificate?.subject || "Unknown",
+                            validFrom: result.certificate?.validFrom || "Unknown",
+                            validTo: result.certificate?.validTo || "Unknown",
+                            algorithm: result.certificate?.algorithm || "Unknown"
+                        }
+                    }
+                };
+
+                // 활성 탭을 Summary로 설정
+                activeTab = 'Summary';
+                error = null;
+
+            } else {
+                throw new Error('분석에 실패했습니다.');
+            }
+        } catch (err) {
+            console.error('URL 분석 중 오류 발생:', err);
+            analysisStore.setError(err.message);
+            error = err.message;
+        } finally {
+            analysisStore.finishAnalysis();
+            isAnalyzing = false;
+        }
+    }
+
+    // onMount와 URL 매개변수 변경 감지는 그대로 유지
     onMount(async () => {
         const urlHash = $page.url.searchParams.get('hash');
+        console.log('onMount - URL 해시:', urlHash);
+        
         if (!urlHash) {
             error = '올바르지 않은 접근입니다.';
             return;
@@ -61,202 +304,53 @@
     $: {
         const urlHash = $page.url.searchParams.get('hash');
         if (urlHash) {
+            console.log('URL 해시 변경 감지:', urlHash);
             loadResultsByHash(urlHash);
         }
     }
 
-    async function fetchResults(urlToAnalyze, currentHash) {
-        isAnalyzing = true;
-        error = null;
-        try {
-            // 더미 데이터 사용
-            const dummyResults = {
-                isSuccess: true,
-                statusCode: 200,
-                isMalicious: false,
-                info1: 'Sample Information 1',
-                info2: 'Sample Information 2',
-                info3: 'Sample Information 3',
-                barChartData: {
-                    labels: ['위험도', '신뢰도', '악성코드', '피싱', '스팸', '평판'],
-                    datasets: [{
-                        label: '보안 분석 결과',
-                        data: [65, 85, 30, 45, 20, 75],
-                        backgroundColor: [
-                            'rgba(66, 153, 225, 0.5)',
-                            'rgba(49, 130, 206, 0.5)',
-                            'rgba(43, 108, 176, 0.5)',
-                            'rgba(44, 82, 130, 0.5)',
-                            'rgba(42, 67, 101, 0.5)',
-                            'rgba(26, 32, 44, 0.5)'
-                        ],
-                        borderColor: [
-                            'rgba(66, 153, 225, 1)',
-                            'rgba(49, 130, 206, 1)',
-                            'rgba(43, 108, 176, 1)',
-                            'rgba(44, 82, 130, 1)',
-                            'rgba(42, 67, 101, 1)',
-                            'rgba(26, 32, 44, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                pieChartData: {
-                    labels: ['안전', '의심', '위험'],
-                    datasets: [{
-                        data: [65, 25, 10],
-                        backgroundColor: [
-                            'rgba(72, 187, 120, 0.8)',
-                            'rgba(246, 173, 85, 0.8)',
-                            'rgba(245, 101, 101, 0.8)'
-                        ],
-                        hoverBackgroundColor: [
-                            'rgba(72, 187, 120, 1)',
-                            'rgba(246, 173, 85, 1)',
-                            'rgba(245, 101, 101, 1)'
-                        ]
-                    }]
-                },
-                domainInfo: {
-                    registrar: {
-                        name: "GoDaddy.com, LLC",
-                        url: "http://www.godaddy.com"
-                    },
-                    dates: {
-                        creation: "2019-08-15",
-                        expiration: "2024-08-15"
-                    },
-                    nameservers: [
-                        "ns1.example.com",
-                        "ns2.example.com"
-                    ],
-                    registrant: {
-                        organization: "Example Organization",
-                        country: "KR",
-                        state: "Seoul",
-                        email: "admin@example.com"
-                    },
-                    certificate: {
-                        exists: true,
-                        issuer: "Let's Encrypt Authority X3",
-                        subject: "*.example.com",
-                        validFrom: "2024-01-01",
-                        validTo: "2024-03-31",
-                        algorithm: "SHA256withRSA"
-                    }
-            }
-            };
+    // 새로운 URL 검색 처리
+        async function handleSearch() {
+        if (searchUrl && !$analysisStore.isAnalyzing) {
+            try {
+                const validation = urlValidation.isValidUrl(searchUrl);
+                if (!validation.isValid) {
+                    throw new Error(validation.error);
+                }
 
-            results = dummyResults;
-            
-            if (currentHash) {
-                searchHistory.saveSearchHistory(urlToAnalyze, results.statusCode, currentHash);
-            }
-
-        } catch (err) {
-            console.error('결과 가져오기 오류:', err);
-            error = err.message;
-        } finally {
-            isAnalyzing = false;
-        }
-    }
-
-    // // API 호출 함수 추가
-    // async function fetchDomainInfo(url) {
-    //     try {
-    //         const response = await fetch('/api/analyze', {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //             body: JSON.stringify({
-    //                 url,
-    //                 prompt: `Please provide WHOIS information for ${url} including: registrar, registration date, expiration date, nameservers, registrant information, and SSL certificate details if available. Format the response as JSON.`
-    //             })
-    //         });
-            
-    //         if (!response.ok) throw new Error('API 요청 실패');
-            
-    //         return await response.json();
-    //     } catch (error) {
-    //         console.error('도메인 정보 조회 실패:', error);
-    //         throw error;
-    //     }
-    // }
-    
-    async function fetchDomainInfo(url) {
-        try {
-            const response = await fetch(`/apis/malicious-domain/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    requested_url: url
-                })
-            });
-            
-            if (!response.ok) throw new Error('API 요청 실패');
-            
-            const data = await response.json();
-            if (data.url_uuid) {
-                return await pollResults(data.url_uuid);
-            }
-            
-            throw new Error('UUID를 받지 못했습니다');
-        } catch (error) {
-            console.error('도메인 분석 요청 실패:', error);
-            throw error;
-        }
-    }
-    
-    // 검색 처리 함수
-    // 결과 페이지의 handleSearch 함수 수정
-    async function handleSearch() {
-    if (searchUrl && !isAnalyzing) {
-        isAnalyzing = true;
-        error = null;
-        
-        try {
-            const validation = urlValidation.isValidUrl(searchUrl);
-            if (!validation.isValid) {
-                throw new Error(validation.error);
-            }
-
-            const validatedUrl = validation.url;
-            const result = await api.analyzeUrl(validatedUrl);
-            
-            if (result.isSuccess) {
+                const validatedUrl = validation.url;
                 const urlHash = await sha256(validatedUrl);
                 
+                displayUrl = validatedUrl; // displayUrl 업데이트
+
+                // 검색 기록 저장
                 searchHistory.addSearch({
                     url: validatedUrl,
                     urlHash: urlHash,
-                    title: 'Analyzing...',
-                    status: 'Online',
+                    title: '분석 중...',
+                    status: 'Processing',
                     resourceCount: 0,
                     linkCount: 0,
-                    tags: ['normal'],
-                    country: 'Analyzing...'
+                    tags: ['analyzing'],
+                    country: '-'
                 });
 
+                // URL 맵 업데이트
                 const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
                 urlMap[urlHash] = validatedUrl;
                 localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
 
-                goto(`/results?hash=${urlHash}&uuid=${result.urlUuid}`);
-                searchUrl = '';
-            } else {
-                throw new Error('분석에 실패했습니다.');
+                // 분석 시작
+                analysisStore.startAnalysis(validatedUrl);
+                window.history.pushState({}, '', `/results?hash=${urlHash}`);
+                await analyzeUrl(validatedUrl);
+
+            } catch (err) {
+                console.error('결과 페이지 에러:', err);
+                analysisStore.setError(err.message);
             }
-        } catch (err) {
-            error = err.message;
-            console.error('URL 분석 중 오류 발생:', err);
-        } finally {
-            isAnalyzing = false;
         }
     }
-}
 
     function getStatusColor(status) {
         switch(status.toLowerCase()) {
@@ -345,13 +439,14 @@
 
     <!-- 분석 결과 콘텐츠 -->
     <div class="max-w-7xl mx-auto px-4 py-4 sm:py-6">
-        {#if isAnalyzing}
-            <div class="flex flex-col items-center justify-center py-8 sm:py-12">
-                <svg class="animate-spin h-12 w-12 sm:h-16 sm:w-16 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p class="mt-4 text-base sm:text-xl text-gray-600">URL을 분석하는 중입니다...</p>
+        {#if $analysisStore.isAnalyzing}
+            <!-- 로딩 상태 UI -->
+            <div class="min-h-[60vh] flex items-center justify-center">
+                <div class="text-center">
+                    <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto"></div>
+                    <p class="mt-4 text-lg font-medium">보고서 생성 중...</p>
+                    <p class="mt-2 text-sm text-gray-500">잠시만 기다려주세요.</p>
+                </div>
             </div>
         {:else if error}
             <div class="text-center py-8 sm:py-12">

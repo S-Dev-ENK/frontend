@@ -2,6 +2,7 @@
     import { fade } from 'svelte/transition';
     import { goto } from '$app/navigation';
     import { searchHistory } from '$lib/stores/searchHistory';
+    import { analysisStore } from '$lib/stores/analysisStore';
     import api from '$lib/api';
     import { onMount } from 'svelte';
     import { urlValidation } from '$lib/utils/urlValidation';
@@ -19,52 +20,57 @@
         return hashHex;
     }
 
-// 메인 페이지의 handleSubmit 함수 수정
-async function handleSubmit() {
-    if (url && !isAnalyzing) {
-        isAnalyzing = true;
-        error = null;
-        
-        try {
-            const validation = urlValidation.isValidUrl(url);
-            if (!validation.isValid) {
-                throw new Error(validation.error);
-            }
-
-            const validatedUrl = validation.url;
-            const result = await api.analyzeUrl(validatedUrl);
-            
-            if (result.isSuccess) {
-                const urlHash = await sha256(validatedUrl);
+    // 메인 페이지의 handleSubmit 함수 수정
+        async function handleSubmit() {
+        if (url && !$analysisStore.isAnalyzing) {
+            try {
+                console.log('메인 페이지 URL 입력:', url);
                 
+                const validation = urlValidation.isValidUrl(url);
+                if (!validation.isValid) {
+                    throw new Error(validation.error);
+                }
+
+                const validatedUrl = validation.url;
+                const urlHash = await sha256(validatedUrl);
+
+                console.log('URL 검증 완료:', validatedUrl);
+
+                // 검색 기록 저장
                 searchHistory.addSearch({
                     url: validatedUrl,
                     urlHash: urlHash,
-                    title: 'Analyzing...',
-                    status: 'Online',
+                    title: '분석 중...',
+                    status: 'Processing',
                     resourceCount: 0,
                     linkCount: 0,
-                    tags: ['normal'],
-                    country: 'Analyzing...'
+                    tags: ['analyzing'],
+                    country: '-'
                 });
 
+                // URL 맵 업데이트
                 const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
                 urlMap[urlHash] = validatedUrl;
                 localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
 
-                goto(`/results?hash=${urlHash}&uuid=${result.urlUuid}`);
-            } else {
-                throw new Error('분석에 실패했습니다.');
+                // 분석 시작
+                analysisStore.startAnalysis(validatedUrl);
+                
+                // API 호출
+                console.log('API 호출 시작');
+                // const result = await api.analyzeUrl(validatedUrl);
+                
+                goto(`/results?hash=${urlHash}`);
+
+            } catch (err) {
+                error = err.message;
+                console.error('URL 분석 중 오류 발생:', err);
+                analysisStore.setError(err.message);
+            } finally {
+                isAnalyzing = false;
             }
-        } catch (err) {
-            error = err.message;
-            console.error('URL 분석 중 오류 발생:', err);
-        } finally {
-            isAnalyzing = false;
         }
     }
-}
-
 
     function getStatusClass(status) {
         return status === 'Online' ? 'bg-green-500' : 'bg-gray-500';
