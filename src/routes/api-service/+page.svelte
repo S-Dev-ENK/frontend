@@ -1,6 +1,7 @@
 <script>
     import { fade } from 'svelte/transition';
     import { onMount } from 'svelte';
+    import ApiDocs from '$lib/components/ApiDocs.svelte';  // 컴포넌트 import 추가
 
     let userName = '';
     let phoneNumber = '';
@@ -363,7 +364,13 @@
             </div>
         {/if}
     </div>
+    <div class="relative w-[95%] max-w-screen-2xl mx-auto mt-20 sm:mt-40 bg-white rounded-lg shadow-lg overflow-hidden pb-4 fixed-content mb-8">
+        <ApiDocs />
+    </div>
 </div>
+
+
+    
 
 <!-- Footer -->
 <div class="w-full bg-white text-gray-600 text-xs border-t-4">
