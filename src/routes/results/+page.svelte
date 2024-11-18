@@ -172,135 +172,154 @@
         }
     }
 
-    // URL 분석 함수
-async function analyzeUrl(targetUrl) {
-    try {
-        const urlHash = await sha256(targetUrl);
-        
+    async function analyzeUrl(targetUrl) {
+        try {
+            const urlHash = await sha256(targetUrl);
+            const result = await api.analyzeUrl(targetUrl);
+            
+            if (result.isSuccess) {
+                // urlUuid 저장
+                const urlUuid = result.urlUuid;
+                
+                // 검색 기록 업데이트
+                searchHistory.addSearch({
+                    url: targetUrl,
+                    urlHash: urlHash,
+                    title: targetUrl, // 초기값은 URL로 설정
+                    status: 'Processing',
+                    resourceCount: 0,
+                    linkCount: 0,
+                    tags: ['analyzing'],
+                    country: '-'
+                });
 
-        // 메인 분석 API 호출
-        const result = await api.analyzeUrl(targetUrl);
-        
-        if (result.isSuccess) {
-            // 검색 기록 업데이트
-            searchHistory.addSearch({
-                url: targetUrl,
-                urlHash: urlHash,
-                title: result.title || targetUrl,
-                status: 'Online',
-                resourceCount: result.resourceCount || 0,
-                linkCount: result.linkCount || 0,
-                tags: result.tags || ['normal'],
-                country: result.country || '-'
-            });
+                // 상세 정보 가져오기
+                const details = await api.getUrlDetails(urlUuid);
+                
+                if (details.isSuccess) {
+                    // 상세 정보로 검색 기록 업데이트
+                    searchHistory.updateSearchStatus(urlHash, AnalysisStatus.COMPLETE, {
+                        title: details.data.title || targetUrl,
+                        status: 'Online',
+                        resourceCount: details.data.resourceCount || 0,
+                        linkCount: details.data.linkCount || 0,
+                        tags: details.data.tags || ['normal'],
+                        country: details.data.country || '-'
+                    });
 
-            // 분석 결과 데이터 설정
-            results = {
-                isSuccess: true,
-                statusCode: result.statusCode,
-                isMalicious: result.isMalicious,
-                info1: result.info1,
-                info2: result.info2,
-                info3: result.info3,
-                barChartData: {
-                    labels: ['위험도', '신뢰도', '악성코드', '피싱', '스팸', '평판'],
-                    datasets: [{
-                        label: '보안 분석 결과',
-                        data: [
-                            result.riskScore || 0,
-                            result.trustScore || 0,
-                            result.malwareScore || 0,
-                            result.phishingScore || 0,
-                            result.spamScore || 0,
-                            result.reputationScore || 0
-                        ],
-                        backgroundColor: [
-                            'rgba(66, 153, 225, 0.5)',
-                            'rgba(49, 130, 206, 0.5)',
-                            'rgba(43, 108, 176, 0.5)',
-                            'rgba(44, 82, 130, 0.5)',
-                            'rgba(42, 67, 101, 0.5)',
-                            'rgba(26, 32, 44, 0.5)'
-                        ],
-                        borderColor: [
-                            'rgba(66, 153, 225, 1)',
-                            'rgba(49, 130, 206, 1)',
-                            'rgba(43, 108, 176, 1)',
-                            'rgba(44, 82, 130, 1)',
-                            'rgba(42, 67, 101, 1)',
-                            'rgba(26, 32, 44, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                pieChartData: {
-                    labels: ['안전', '의심', '위험'],
-                    datasets: [{
-                        data: [
-                            result.safeScore || 65,
-                            result.suspiciousScore || 25,
-                            result.dangerScore || 10
-                        ],
-                        backgroundColor: [
-                            'rgba(72, 187, 120, 0.8)',
-                            'rgba(246, 173, 85, 0.8)',
-                            'rgba(245, 101, 101, 0.8)'
-                        ],
-                        hoverBackgroundColor: [
-                            'rgba(72, 187, 120, 1)',
-                            'rgba(246, 173, 85, 1)',
-                            'rgba(245, 101, 101, 1)'
-                        ]
-                    }]
-                },
-                domainInfo: {
-                    registrar: {
-                        name: result.registrar?.name || "Unknown",
-                        url: result.registrar?.url || "#"
-                    },
-                    dates: {
-                        creation: result.dates?.creation || "Unknown",
-                        expiration: result.dates?.expiration || "Unknown"
-                    },
-                    nameservers: result.nameservers || [],
-                    registrant: {
-                        organization: result.registrant?.organization || "Unknown",
-                        country: result.registrant?.country || "Unknown",
-                        state: result.registrant?.state || "Unknown",
-                        email: result.registrant?.email || "Unknown"
-                    },
-                    certificate: {
-                        exists: result.certificate?.exists || false,
-                        issuer: result.certificate?.issuer || "Unknown",
-                        subject: result.certificate?.subject || "Unknown",
-                        validFrom: result.certificate?.validFrom || "Unknown",
-                        validTo: result.certificate?.validTo || "Unknown",
-                        algorithm: result.certificate?.algorithm || "Unknown"
+                    // 결과 데이터 설정
+                    results = {
+                        isSuccess: true,
+                        statusCode: details.data.status_code,
+                        isMalicious: details.data.isMalicious,
+                        info1: details.data.title || targetUrl,
+                        info2: details.data.info2 || '',
+                        info3: details.data.info3 || '',
+                        barChartData: {
+                            labels: ['위험도', '신뢰도', '악성코드', '피싱', '스팸', '평판'],
+                            datasets: [{
+                                label: '보안 분석 결과',
+                                data: [
+                                    details.data.riskScore || 0,
+                                    details.data.trustScore || 0,
+                                    details.data.malwareScore || 0,
+                                    details.data.phishingScore || 0,
+                                    details.data.spamScore || 0,
+                                    details.data.reputationScore || 0
+                                ],
+                                backgroundColor: [
+                                    'rgba(66, 153, 225, 0.5)',
+                                    'rgba(49, 130, 206, 0.5)',
+                                    'rgba(43, 108, 176, 0.5)',
+                                    'rgba(44, 82, 130, 0.5)',
+                                    'rgba(42, 67, 101, 0.5)',
+                                    'rgba(26, 32, 44, 0.5)'
+                                ],
+                                borderColor: [
+                                    'rgba(66, 153, 225, 1)',
+                                    'rgba(49, 130, 206, 1)',
+                                    'rgba(43, 108, 176, 1)',
+                                    'rgba(44, 82, 130, 1)',
+                                    'rgba(42, 67, 101, 1)',
+                                    'rgba(26, 32, 44, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        pieChartData: {
+                            labels: ['안전', '의심', '위험'],
+                            datasets: [{
+                                data: [
+                                    details.data.safeScore || 65,
+                                    details.data.suspiciousScore || 25,
+                                    details.data.dangerScore || 10
+                                ],
+                                backgroundColor: [
+                                    'rgba(72, 187, 120, 0.8)',
+                                    'rgba(246, 173, 85, 0.8)',
+                                    'rgba(245, 101, 101, 0.8)'
+                                ],
+                                hoverBackgroundColor: [
+                                    'rgba(72, 187, 120, 1)',
+                                    'rgba(246, 173, 85, 1)',
+                                    'rgba(245, 101, 101, 1)'
+                                ]
+                            }]
+                        },
+                        domainInfo: {
+                            registrar: {
+                                name: details.data.registrar?.name || "Unknown",
+                                url: details.data.registrar?.url || "#"
+                            },
+                            dates: {
+                                creation: details.data.dates?.creation || "Unknown",
+                                expiration: details.data.dates?.expiration || "Unknown"
+                            },
+                            nameservers: details.data.nameservers || [],
+                            registrant: {
+                                organization: details.data.registrant?.organization || "Unknown",
+                                country: details.data.registrant?.country || "Unknown",
+                                state: details.data.registrant?.state || "Unknown",
+                                email: details.data.registrant?.email || "Unknown"
+                            },
+                            certificate: {
+                                exists: details.data.certificate?.exists || false,
+                                issuer: details.data.certificate?.issuer || "Unknown",
+                                subject: details.data.certificate?.subject || "Unknown",
+                                validFrom: details.data.certificate?.validFrom || "Unknown",
+                                validTo: details.data.certificate?.validTo || "Unknown",
+                                algorithm: details.data.certificate?.algorithm || "Unknown"
+                            }
+                        }
+                    };
+
+                    // AI Report도 시작
+                    if (!$aiReportStore.isAnalyzing(urlHash)) {
+                        aiReportStore.startAnalysis(urlHash);
+                        generateAIReport({ url: targetUrl, urlHash })
+                            .then(report => {
+                                aiReportStore.setReport(urlHash, report);
+                            })
+                            .catch(err => {
+                                aiReportStore.setError(urlHash, err.message);
+                                console.error('AI Report 생성 중 오류:', err);
+                            });
                     }
+
+                    return results;
                 }
-            };
-
-            // 활성 탭을 Summary로 설정
-            activeTab = 'Summary';
-            error = null;
-
-        } else {
+            }
+            
             throw new Error('분석에 실패했습니다.');
+        } catch (err) {
+            console.error('URL 분석 중 오류 발생:', err);
+            // urlHash 스코프 문제 해결
+            const errorUrlHash = await sha256(targetUrl);
+            searchHistory.updateSearchStatus(errorUrlHash, AnalysisStatus.ERROR);
+            error = err.message;
+            throw err;
         }
-
-        // AI Report 완료 대기 없이 메인 분석 완료
-        return results;
-
-    } catch (err) {
-        console.error('URL 분석 중 오류 발생:', err);
-        analysisStore.setError(err.message);
-        error = err.message;
-        throw err;
-    } finally {
-        analysisStore.finishAnalysis();
-        isAnalyzing = false;
     }
-}
 
 
 
@@ -325,48 +344,57 @@ async function analyzeUrl(targetUrl) {
     //     }
     // }
 
-    // 새로운 URL 검색 처리
+        // handleSearch 함수 수정
         async function handleSearch() {
-        if (searchUrl && !$analysisStore.isAnalyzing) {
-            try {
-                const validation = urlValidation.isValidUrl(searchUrl);
-                if (!validation.isValid) {
-                    throw new Error(validation.error);
+            if (searchUrl && !$analysisStore.isAnalyzing) {
+                try {
+                    const validation = urlValidation.isValidUrl(searchUrl);
+                    if (!validation.isValid) {
+                        throw new Error(validation.error);
+                    }
+
+                    const validatedUrl = validation.url;
+                    const urlHash = await sha256(validatedUrl);
+                    
+                    displayUrl = validatedUrl; // 현재 URL 업데이트
+
+                    // URL 맵 업데이트 (캐시 최신화)
+                    const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
+                    urlMap[urlHash] = validatedUrl;
+                    localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
+
+                    // AI Report 초기화 및 재시작
+                    aiReportStore.startAnalysis(urlHash);
+                    generateAIReport({ url: validatedUrl, urlHash })
+                        .then(report => {
+                            aiReportStore.setReport(urlHash, report);
+                        })
+                        .catch(err => {
+                            aiReportStore.setError(urlHash, err.message);
+                            console.error('AI Report 생성 중 오류:', err);
+                        });
+
+                    analysisStore.startAnalysis(validatedUrl);
+                    
+                    try {
+                        await analyzeUrl(validatedUrl);
+                        // URL 파라미터 업데이트 (캐시된 URL이 아닌 현재 검색한 URL 사용)
+                        await goto(`/results?hash=${urlHash}&url=${encodeURIComponent(validatedUrl)}`);
+                        activeTab = 'AI Report';
+                    } catch (err) {
+                        console.error('분석 실패:', err);
+                        error = err.message;
+                    }
+
+                } catch (err) {
+                    console.error('결과 페이지 에러:', err);
+                    error = err.message;
+                    analysisStore.setError(err.message);
+                } finally {
+                    isAnalyzing = false;
                 }
-
-                const validatedUrl = validation.url;
-                const urlHash = await sha256(validatedUrl);
-                
-                displayUrl = validatedUrl; // displayUrl 업데이트
-
-                // 검색 기록 저장
-                searchHistory.addSearch({
-                    url: validatedUrl,
-                    urlHash: urlHash,
-                    title: '분석 중...',
-                    status: 'Processing',
-                    resourceCount: 0,
-                    linkCount: 0,
-                    tags: ['analyzing'],
-                    country: '-'
-                });
-
-                // URL 맵 업데이트
-                const urlMap = JSON.parse(localStorage.getItem('urlHashMap') || '{}');
-                urlMap[urlHash] = validatedUrl;
-                localStorage.setItem('urlHashMap', JSON.stringify(urlMap));
-
-                // 분석 시작
-                analysisStore.startAnalysis(validatedUrl);
-                window.history.pushState({}, '', `/results?hash=${urlHash}`);
-                await analyzeUrl(validatedUrl);
-
-            } catch (err) {
-                console.error('결과 페이지 에러:', err);
-                analysisStore.setError(err.message);
             }
         }
-    }
 
     function getStatusColor(status) {
         switch(status.toLowerCase()) {
@@ -381,9 +409,34 @@ async function analyzeUrl(targetUrl) {
         }
     }
 
-    function handleTabChange(tab) {
-        // AI Report 탭은 독립적으로 동작하므로 별도 처리 없이 탭만 변경
+        // 탭 변경 함수 수정
+        async function handleTabChange(tab) {
         activeTab = tab;
+        
+        if (tab === 'AI Report' && searchUrl) { // displayUrl 대신 searchUrl 사용
+            try {
+                isAnalyzing = true;
+                const urlHash = await sha256(searchUrl);
+                
+                // AI Report Store 초기화 및 새로운 분석 시작
+                aiReportStore.startAnalysis(urlHash);
+                console.log('AI Report 생성 시작 - URL:', searchUrl);
+                
+                const report = await generateAIReport({ 
+                    url: searchUrl, 
+                    urlHash 
+                });
+                
+                console.log('AI Report 생성 완료:', report);
+                aiReportStore.setReport(urlHash, report);
+                
+            } catch (err) {
+                console.error('AI Report 생성 실패:', err);
+                aiReportStore.setError(urlHash, err.message);
+            } finally {
+                isAnalyzing = false;
+            }
+        }
     }
 
     // 상태 변수 (예시)
@@ -446,7 +499,7 @@ async function analyzeUrl(targetUrl) {
                             {activeTab === tab 
                                 ? 'border-blue-500 text-blue-600' 
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
-                        on:click={() => activeTab = tab}
+                        on:click={() => handleTabChange(tab)}
                     >
                         {tab}
                         {#if activeTab === tab}
@@ -461,7 +514,18 @@ async function analyzeUrl(targetUrl) {
     <!-- 분석 결과 콘텐츠 -->
     <div class="max-w-7xl mx-auto px-4 py-4 sm:py-6">
         {#if activeTab === 'AI Report'}
-            <AIReport />
+            {#if $aiReportStore.isAnalyzing}
+                <div class="min-h-[60vh] flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto"></div>
+                        <p class="mt-4 text-lg font-medium">AI 리포트 생성 중...</p>
+                        <p class="mt-2 text-sm text-gray-500">잠시만 기다려주세요.</p>
+                    </div>
+                </div>
+            {:else}
+                <AIReport url={searchUrl} />
+            {/if}
+
         {:else if $analysisStore.isAnalyzing}
             <!-- 로딩 상태 UI -->
             <div class="min-h-[60vh] flex items-center justify-center">
