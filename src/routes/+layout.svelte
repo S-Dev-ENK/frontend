@@ -176,7 +176,7 @@
                              style="z-index: 100;">
                             <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                                 <a href="#" class="block px-4 py-2 text-xs sm:text-sm text-black hover:bg-gray-100" role="menuitem">PDF 내보내기</a>
-                                <a href="#" class="block px-4 py-2 text-xs sm:text-sm text-black hover:bg-gray-100" role="menuitem">(BETA)RAG보고서 내보내기</a>
+                                <a href="#" class="block px-4 py-2 text-xs sm:text-sm text-black hover:bg-gray-100" role="menuitem">CSV 내보내기</a>
                             </div>
                         </div>
                     {/if}
